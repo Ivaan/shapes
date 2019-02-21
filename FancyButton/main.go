@@ -19,7 +19,7 @@ func main() {
 		makeFancyDisk(Thickness, cutOffHeight, DiskDiameter, NumberOfLoops),
 		sdf.MultiCylinder3D(TotalHeight*4, 1, sdf.V2Set([]sdf.V2{sdf.V2{3, 0}, sdf.V2{-3, 0}})))
 
-	sdf.RenderSTL(disk, 300, "tor.stl")
+	sdf.RenderSTL(disk, 300, "ButtonCorse.stl")
 	// return disk
 	//     .subtract(vcyl(-cutOffHeight, cutOffHeight, 1, 6).translate([3,0,0]))
 	//     .subtract(vcyl(-cutOffHeight, cutOffHeight, 1, 6).translate([-3,0,0]))
