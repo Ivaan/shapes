@@ -46,19 +46,52 @@ func main() {
 
 }
 
-func makeImpellerDisk(p params){
-	bearingRadius := p.bearingRaceOD / 2;
-	thickness := p.impellerThickness / 2;
-	radius := p.impellerDiameter/2;
-	turbineRadius := radius + p.turbineRadius;
-	tollerance := p.impellerToTurbineDiskTollerance;
-	compFactor := 1 / p.impellerCompressionFactor;
+func makeImpellerDisk(p params) sdf.SDF3{
 
+
+
+	return rotate_extrude( polygon({points: points}) );
+}
+
+type impellerDiskProfile struct {
+	bearingRadius float64
+	thickness float64
+	radius float64
+	turbineRadius float64
+	tollerance float64
+
+	impellerCompM float64
+	impellerCompB float64
+	turbineCompM float64
+	turbineCompB float64
+
+	bb     sdf.Box2
+}
+
+func newImpellerDiskProfile(p params) sdf.SDF2{
+	imp := impellerDisk{}
+	imp.bearingRadius := p.bearingRaceOD / 2
+	imp.thickness := p.impellerThickness / 2
+	imp.radius := p.impellerDiameter/2
+	imp.turbineRadius := radius + p.turbineRadius
+	imp.tollerance := p.impellerToTurbineDiskTollerance
+	compFactor := 1 / p.impellerCompressionFactor
+	imp.impellerCompM := (compFactor-1)/(imp.radius-imp.bearingRadius)
+	imp.impellerCompB := 1 - imp.impellerCompM*imp.bearingRadius
+	imp.turbineCompM := (1-compFactor)/(imp.turbineRadius-imp.radius)
+	imp.turbineCompB := compFactor - turbineCompM*imp.radius
+	imp.bb = sdf.Box2{sdv.V2{0,0}, sdf.V2{imp.turbineRadius, imp.thickness + imp.tollerance}}
+}
+
+//Evaluate implements sdf
+func (imp *impellerDiskProfile) Evaluate(p sdf.V2) float64 {
+
+	if(p.X < bearingRadius)
 	var points = [];
 	points.push([0, -tollerance]);
 	points.push([0, thickness]);
-	var m = (compFactor-1)/(radius-bearingRadius);
-	var b = 1 - m*bearingRadius;
+	var m = 
+	var b = ;
 	for(var x = bearingRadius; x < radius; x = x + 1){
 		y = bearingRadius / x  * thickness * (m*x + b);
 		points.push([x,y]);
@@ -73,7 +106,9 @@ func makeImpellerDisk(p params){
 	points.push([turbineRadius+1, bearingRadius / x  * thickness * (m*turbineRadius + b)]);
 	points.push([turbineRadius+1, -tollerance]);
 	points.push([0, -tollerance]);
+}
 
-
-	return rotate_extrude( polygon({points: points}) );
+//BoundingBox implements sdf
+func (imp *impellerDisk) BoundingBox() sdf.Box2 {
+	return imp.bb
 }
