@@ -69,7 +69,7 @@ type impellerDiskProfile struct {
 }
 
 func newImpellerDiskProfile(p params) sdf.SDF2{
-	imp := impellerDisk{}
+	imp := impellerDiskProfile{}
 	imp.bearingRadius := p.bearingRaceOD / 2
 	imp.thickness := p.impellerThickness / 2
 	imp.radius := p.impellerDiameter/2
@@ -85,8 +85,21 @@ func newImpellerDiskProfile(p params) sdf.SDF2{
 
 //Evaluate implements sdf
 func (imp *impellerDiskProfile) Evaluate(p sdf.V2) float64 {
+	if p.X < 0 { //left of origin
+		if p.Y < 0 {
+			//return distance to (0,0)
+		} else if p.Y < imp.thickness + imp.tollerance {
+			//return p.Y (negative?)
+		} else {
+			//return distance to (0, imp.thickness + imp.tollerance)
+		}
+	} else if p.X < imp.bearingRadius { //left of where curve starts
 
-	if(p.X < bearingRadius)
+	} else if p.X < imp.turbineRadius { // within curve
+		
+	} else { //past (right of) model
+
+	}
 	var points = [];
 	points.push([0, -tollerance]);
 	points.push([0, thickness]);
@@ -109,6 +122,6 @@ func (imp *impellerDiskProfile) Evaluate(p sdf.V2) float64 {
 }
 
 //BoundingBox implements sdf
-func (imp *impellerDisk) BoundingBox() sdf.Box2 {
+func (imp *impellerDiskProfile) BoundingBox() sdf.Box2 {
 	return imp.bb
 }
