@@ -37,7 +37,7 @@ func repeateAround(solid sdf.SDF3, times int) []sdf.SDF3 {
 	for i := 0; i < times; i++ {
 		copies[i] = sdf.Transform3D(
 			solid,
-			sdf.RotateZ(float64(i)*sdf.TAU/float64(times)))
+			sdf.RotateZ(float64(i)*sdf.Tau/float64(times)))
 	}
 
 	return copies
