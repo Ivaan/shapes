@@ -13,3 +13,6 @@
 
 # STL output files of shapes (likely too big for github)
 *.stl
+
+# dxf (2d) output files of shapes (likely too big for github)
+*.dxf
