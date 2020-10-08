@@ -2,7 +2,8 @@ package main
 
 import (
 	"flag"
-	"fmt"
+
+	"github.com/deadsy/sdfx/sdf"
 )
 
 type params struct {
@@ -41,54 +42,109 @@ func loadParams() params {
 }
 
 func main() {
-	p := loadParams()
-	
+	//p := loadParams()
+	h := newHyperbol(.5, 3)
+	solid := sdf.Extrude3D(h, 2)
+	sdf.RenderSTL(solid, 300, "solid.stl")
 
 }
 
-func makeImpellerDisk(p params) sdf.SDF3{
+type hyperbol struct {
+	minX, maxX float64
+	bb         sdf.Box2
+}
 
+func newHyperbol(minX, maxX float64) sdf.SDF2 {
+	bb := sdf.Box2{
+		Min: sdf.V2{minX, 0},
+		//Max: sdf.V2{maxX, 1 / minX},
+		Max: sdf.V2{maxX, -minX/2 + 2},
+	}
+	return hyperbol{
+		minX: minX,
+		maxX: maxX,
+		bb:   bb,
+	}
+}
 
+func (hyp hyperbol) Evaluate(q sdf.V2) float64 {
+	//p = -2/5 (x - 2 (y + 1))
+	if q.X < hyp.minX { // not q but p!!
+		if q.Y < 0 {
+			return q.Sub(hyp.bb.Min).Length()
+		} else if q.Y < hyp.bb.Max.Y {
+			return hyp.minX - q.X
+		} else {
+			return q.Sub(sdf.V2{hyp.minX, hyp.bb.Max.Y}).Length()
+		}
+	} else if q.X < hyp.maxX {
+		x := -2.0 / 5.0 * (q.X - 2.0*(q.Y+1.0))
+		p := sdf.V2{x, -x/2.0 + 2.0}
+		var s float64
+		if q.Y > -q.X/2.0+2.0 {
+			s = 1
+		} else {
+			s = -1
+		}
+		return s * q.Sub(p).Length()
+	} else {
+		if q.Y < 0 {
+			return q.Sub(sdf.V2{hyp.maxX, 0}).Length()
+		} else if q.Y < hyp.bb.Max.Y {
+			return q.X - hyp.maxX - q.X
+		} else {
+			return q.Sub(sdf.V2{hyp.maxX, -hyp.maxX/2 + 2}).Length()
+		}
+	}
+}
 
-	return rotate_extrude( polygon({points: points}) );
+func (hyp hyperbol) BoundingBox() sdf.Box2 {
+	return hyp.bb
+}
+
+func makeImpellerDisk(p params) sdf.SDF3 {
+	//return rotate_extrude( polygon({points: points}) );
+	return nil
 }
 
 type impellerDiskProfile struct {
 	bearingRadius float64
-	thickness float64
-	radius float64
+	thickness     float64
+	radius        float64
 	turbineRadius float64
-	tollerance float64
+	tollerance    float64
 
 	impellerCompM float64
 	impellerCompB float64
-	turbineCompM float64
-	turbineCompB float64
+	turbineCompM  float64
+	turbineCompB  float64
 
-	bb     sdf.Box2
+	bb sdf.Box2
 }
 
-func newImpellerDiskProfile(p params) sdf.SDF2{
+func newImpellerDiskProfile(p params) sdf.SDF2 {
 	imp := impellerDiskProfile{}
-	imp.bearingRadius := p.bearingRaceOD / 2
-	imp.thickness := p.impellerThickness / 2
-	imp.radius := p.impellerDiameter/2
-	imp.turbineRadius := radius + p.turbineRadius
-	imp.tollerance := p.impellerToTurbineDiskTollerance
+	imp.bearingRadius = p.bearingRaceOD / 2
+	imp.thickness = p.impellerThickness / 2
+	imp.radius = p.impellerDiameter / 2
+	imp.turbineRadius = imp.radius + p.turbineRadius
+	imp.tollerance = p.impellerToTurbineDiskTollerance
 	compFactor := 1 / p.impellerCompressionFactor
-	imp.impellerCompM := (compFactor-1)/(imp.radius-imp.bearingRadius)
-	imp.impellerCompB := 1 - imp.impellerCompM*imp.bearingRadius
-	imp.turbineCompM := (1-compFactor)/(imp.turbineRadius-imp.radius)
-	imp.turbineCompB := compFactor - turbineCompM*imp.radius
-	imp.bb = sdf.Box2{sdv.V2{0,0}, sdf.V2{imp.turbineRadius, imp.thickness + imp.tollerance}}
+	imp.impellerCompM = (compFactor - 1) / (imp.radius - imp.bearingRadius)
+	imp.impellerCompB = 1 - imp.impellerCompM*imp.bearingRadius
+	imp.turbineCompM = (1 - compFactor) / (imp.turbineRadius - imp.radius)
+	imp.turbineCompB = compFactor - imp.turbineCompM*imp.radius
+	imp.bb = sdf.Box2{sdf.V2{0, 0}, sdf.V2{imp.turbineRadius, imp.thickness + imp.tollerance}}
+	return imp
 }
 
 //Evaluate implements sdf
-func (imp *impellerDiskProfile) Evaluate(p sdf.V2) float64 {
+func (imp impellerDiskProfile) Evaluate(p sdf.V2) float64 {
+	//p = -1/2 sqrt((sqrt((27 x^2 - 27 y^2)^2 - 4 (3 x y - 12)^3) + 27 x^2 - 27 y^2)^(1/3)/(3 2^(1/3)) + (2^(1/3) (x y - 4))/(sqrt((27 x^2 - 27 y^2)^2 - 4 (3 x y - 12)^3) + 27 x^2 - 27 y^2)^(1/3) + y^2/4) - 1/2 sqrt(-(sqrt((27 x^2 - 27 y^2)^2 - 4 (3 x y - 12)^3) + 27 x^2 - 27 y^2)^(1/3)/(3 2^(1/3)) - (2^(1/3) (x y - 4))/(sqrt((27 x^2 - 27 y^2)^2 - 4 (3 x y - 12)^3) + 27 x^2 - 27 y^2)^(1/3) - (y^3 - 8 x)/(4 sqrt((sqrt((27 x^2 - 27 y^2)^2 - 4 (3 x y - 12)^3) + 27 x^2 - 27 y^2)^(1/3)/(3 2^(1/3)) + (2^(1/3) (x y - 4))/(sqrt((27 x^2 - 27 y^2)^2 - 4 (3 x y - 12)^3) + 27 x^2 - 27 y^2)^(1/3) + y^2/4)) + y^2/2) + y/4
 	if p.X < 0 { //left of origin
 		if p.Y < 0 {
 			//return distance to (0,0)
-		} else if p.Y < imp.thickness + imp.tollerance {
+		} else if p.Y < imp.thickness+imp.tollerance {
 			//return p.Y (negative?)
 		} else {
 			//return distance to (0, imp.thickness + imp.tollerance)
@@ -96,32 +152,35 @@ func (imp *impellerDiskProfile) Evaluate(p sdf.V2) float64 {
 	} else if p.X < imp.bearingRadius { //left of where curve starts
 
 	} else if p.X < imp.turbineRadius { // within curve
-		
+
 	} else { //past (right of) model
 
 	}
-	var points = [];
-	points.push([0, -tollerance]);
-	points.push([0, thickness]);
-	var m = 
-	var b = ;
-	for(var x = bearingRadius; x < radius; x = x + 1){
-		y = bearingRadius / x  * thickness * (m*x + b);
-		points.push([x,y]);
-	}
-	m = (1-compFactor)/(turbineRadius-radius);
-	b = compFactor - m*radius;
-	for(x = radius; x < turbineRadius; x = x + 1){
-		y = bearingRadius / x  * thickness * (m*x + b);
-		points.push([x,y]);
-	}
-	
-	points.push([turbineRadius+1, bearingRadius / x  * thickness * (m*turbineRadius + b)]);
-	points.push([turbineRadius+1, -tollerance]);
-	points.push([0, -tollerance]);
+	/*
+		var points = [];
+		points.push([0, -tollerance]);
+		points.push([0, thickness]);
+		var m =
+		var b = ;
+		for(var x = bearingRadius; x < radius; x = x + 1){
+			y = bearingRadius / x  * thickness * (m*x + b);
+			points.push([x,y]);
+		}
+		m = (1-compFactor)/(turbineRadius-radius);
+		b = compFactor - m*radius;
+		for(x = radius; x < turbineRadius; x = x + 1){
+			y = bearingRadius / x  * thickness * (m*x + b);
+			points.push([x,y]);
+		}
+
+		points.push([turbineRadius+1, bearingRadius / x  * thickness * (m*turbineRadius + b)]);
+		points.push([turbineRadius+1, -tollerance]);
+		points.push([0, -tollerance]);
+	*/
+	return 0
 }
 
 //BoundingBox implements sdf
-func (imp *impellerDiskProfile) BoundingBox() sdf.Box2 {
+func (imp impellerDiskProfile) BoundingBox() sdf.Box2 {
 	return imp.bb
 }
