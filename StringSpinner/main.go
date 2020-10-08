@@ -58,7 +58,7 @@ func newHyperbol(minX, maxX float64) sdf.SDF2 {
 	bb := sdf.Box2{
 		Min: sdf.V2{minX, 0},
 		//Max: sdf.V2{maxX, 1 / minX},
-		Max: sdf.V2{maxX, -minX/2 + 2},
+		Max: sdf.V2{maxX, -minX/2.0 + 2.0},
 	}
 	return hyperbol{
 		minX: minX,
@@ -67,9 +67,25 @@ func newHyperbol(minX, maxX float64) sdf.SDF2 {
 	}
 }
 
-func (hyp hyperbol) Evaluate(q sdf.V2) float64 {
+func (hyp hyperbol) Evaluate(p sdf.V2) float64 {
+	x := hyp.nearestXPointTo(p)
+	var q sdf V2
+
+	if x < hyp.minX || p.X < hyp.minX { 
+		x = hyp.MinX
+		if p.Y < hyp.maxY {
+			q = sdf.V2(x, p.Y)
+		}
+	} else if q.X < hyp.maxX {
+		adjustedX = x
+	} else {
+		x = hyp.maxX
+		adjustedX = hyp.maxX
+	}
+	return sdf.V2{x, hyp.curveFunc(adjustedX)}
 	//p = -2/5 (x - 2 (y + 1))
-	if q.X < hyp.minX { // not q but p!!
+	q := hyp.nearestPointTo(p)
+	if q.X < hyp.minX { 
 		if q.Y < 0 {
 			return q.Sub(hyp.bb.Min).Length()
 		} else if q.Y < hyp.bb.Max.Y {
@@ -78,8 +94,7 @@ func (hyp hyperbol) Evaluate(q sdf.V2) float64 {
 			return q.Sub(sdf.V2{hyp.minX, hyp.bb.Max.Y}).Length()
 		}
 	} else if q.X < hyp.maxX {
-		x := -2.0 / 5.0 * (q.X - 2.0*(q.Y+1.0))
-		p := sdf.V2{x, -x/2.0 + 2.0}
+		p = hyp.nearestPointTo(q)
 		var s float64
 		if q.Y > -q.X/2.0+2.0 {
 			s = 1
@@ -100,6 +115,14 @@ func (hyp hyperbol) Evaluate(q sdf.V2) float64 {
 
 func (hyp hyperbol) BoundingBox() sdf.Box2 {
 	return hyp.bb
+}
+
+func (hyp hyperbol) nearestXPointTo(q sdfV2) {
+	return -2.0 / 5.0 * (q.X - 2.0*(q.Y+1.0))
+}
+
+func (hyp hyperbol) curveFunc(x) {
+	return -x/2.0 + 2.0
 }
 
 func makeImpellerDisk(p params) sdf.SDF3 {
