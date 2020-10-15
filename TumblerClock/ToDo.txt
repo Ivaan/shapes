@@ -1,0 +1,23 @@
+The Bits
+
+Tumbler
+ - Triangular prism
+ - hex holes at either end for drive
+
+TublerInterface w bearing holder
+ - hex prism
+ - bearing holder
+ - 1/3 circle nib
+ - 2/3 circle nib track
+
+Gear
+ - there will be a few varaeties
+    - some with hex hole
+    - some with bearing holders
+    - left vs right
+
+
+
+2020-10-11
+[ ] - Make prism
+[ ] - Make TumblerInterface
