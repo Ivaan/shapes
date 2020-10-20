@@ -19,19 +19,90 @@ func main() {
 	bearingHolderTolerance := 0.1
 
 	pusherNibSize := 3.0
-	pusherTollerance := 0.2
+	pusherLength := 4.0
+	pusherTollerance := 2.2
 
+	tumblerOutside := makeTumblerOutside(tumblerRadius, tumblerCornerRound, tumblerFaceEdgeLength)
+	bearingHole := makeBearingHole(bearingOD, bearingThickness, bearingHolderStopConstriction, bearingHolderTolerance, tumblerFaceEdgeLength)
+
+	tracks, nibs := makePusherTracksAndNibs(pusherNibSize, pusherLength, tumblerRadius, bearingOD/2, tumblerFaceEdgeLength, pusherTollerance)
+
+	holes := sdf.Union3D(bearingHole, tracks)
+	tumbler := sdf.Difference3D(tumblerOutside, holes)
+	tumbler = sdf.Union3D(tumbler, nibs)
+
+	sdf.RenderSTL(tumbler, 200, "tumbler.stl")
+
+}
+
+func makeTumblerOutside(tumblerRadius, tumblerCornerRound, tumblerFaceEdgeLength float64) sdf.SDF3 {
 	//tumbler, triangle outside, bearing holder hole inside
 	// triangle is an extruded 3 nagon
 	triangle := sdf.Polygon2D(sdf.Nagon(3, tumblerRadius-tumblerCornerRound))
 	triangle = sdf.Offset2D(triangle, tumblerCornerRound)
 	tumblerOutside := sdf.Extrude3D(triangle, tumblerFaceEdgeLength)
+	return tumblerOutside
+}
 
-	//bearing holder hole is an extruded hex with a constriction in the middle
-	//this is accomplished by stacking 5 shapes
-	//top and bottom are bearing sized cylinders
-	//center is constricted cylinder
-	//between top and center (and bottom and center) are correctly oriented truncated between bearing and constricted sized cylinders
+func pusherNibProfile(size float64) sdf.SDF2 {
+	return sdf.Polygon2D([]sdf.V2{
+		{-size / 2, 0},
+		{-size / 2, size},
+		{0, size * 1.5},
+		{size / 2, size},
+		{size / 2, 0},
+		{-size / 2, 0},
+	})
+}
+
+func makePusherTracksAndNibs(pusherNibSize, pusherLength, tumblerRadius, innerClearance, tumblerFaceEdgeLength, pusherTollerance float64) (sdf.SDF3, sdf.SDF3) {
+	pusher2D := pusherNibProfile(pusherNibSize)
+	track2D := pusherNibProfile(pusherNibSize + pusherTollerance/2)
+
+	pushers := make([]sdf.SDF3, 3)
+	tracks := make([]sdf.SDF3, 3)
+
+	for n := 0; n < 3; n++ {
+		distanceFromCenter := (tumblerRadius+innerClearance)/2 + pusherNibSize*(float64(n-1)) // three tracks one halfway between tumbler radioius and the inner clearance, and one on each side
+		startAngle := float64(n) * sdf.Tau / 3
+
+		pusherArcAngle := pusherLength / distanceFromCenter
+
+		pushers[n] = sdf.Transform3D(
+			sdf.RevolveTheta3D(
+				sdf.Transform2D(
+					pusher2D,
+					sdf.Translate2d(sdf.V2{distanceFromCenter, 0}),
+				),
+				pusherArcAngle,
+			),
+			sdf.RotateZ(startAngle-pusherArcAngle/2).Mul(
+				sdf.Translate3d(sdf.V3{0, 0, tumblerFaceEdgeLength / 2}),
+			),
+		)
+
+		tracks[n] = sdf.Transform3D(
+			sdf.RevolveTheta3D(
+				sdf.Transform2D(
+					track2D,
+					sdf.Translate2d(sdf.V2{distanceFromCenter, 0}),
+				),
+				sdf.Tau/3+pusherArcAngle,
+			),
+			sdf.RotateZ(startAngle-pusherArcAngle/2).Mul(
+				sdf.Translate3d(sdf.V3{0, 0, -tumblerFaceEdgeLength / 2}),
+			),
+		)
+	}
+	return sdf.Union3D(tracks...), sdf.Union3D(pushers...)
+}
+
+//bearing holder hole is an extruded hex with a constriction in the middle
+//this is accomplished by stacking 5 shapes
+//top and bottom are bearing sized cylinders
+//center is constricted cylinder
+//between top and center (and bottom and center) are correctly oriented truncated between bearing and constricted sized cylinders
+func makeBearingHole(bearingOD, bearingThickness, bearingHolderStopConstriction, bearingHolderTolerance, tumblerFaceEdgeLength float64) sdf.SDF3 {
 
 	bearingHolder := sdf.Cylinder3D(bearingThickness, bearingOD/2+bearingHolderTolerance, 0)
 	chamfer3d := sdf.Cone3D(
@@ -55,71 +126,5 @@ func main() {
 	bottomChamfer3d := sdf.Transform3D(topChamfer3d, flip)
 
 	bearingHole := sdf.Union3D(topBearingHolder, topChamfer3d, constricted, bottomChamfer3d, bottomBearingHolder)
-
-	pusherNib2D := pusherNibProfile(pusherNibSize)
-	pusherNib3D := sdf.Revolve3D(pusherNib2D)
-
-	pusherTracks := make([]sdf.SDF3, 3)
-	pusherNibs := make([]sdf.SDF3, 3)
-
-	for n := 0; n < 3; n++ {
-		distanceFromCenter := (tumblerRadius+bearingOD/2)/2 + pusherNibSize*(float64(n)-1.0)
-		startAngle := float64(n) * sdf.Tau / 3
-		pusherNibs[n] = sdf.Transform3D(
-			pusherNib3D,
-			sdf.RotateZ(startAngle).Mul(
-				sdf.Translate3d(sdf.V3{distanceFromCenter, 0, tumblerFaceEdgeLength / 2}),
-			),
-		)
-
-		pusherNibHole2D := sdf.Offset2D(pusherNib2D, pusherTollerance)
-		track := sdf.RevolveTheta3D(
-			sdf.Transform2D(
-				pusherNibHole2D,
-				sdf.Translate2d(sdf.V2{distanceFromCenter, 0}),
-			),
-			-sdf.Tau/3,
-		)
-
-		track = sdf.Union3D(
-			track,
-			sdf.Transform3D(
-				sdf.Revolve3D(pusherNibHole2D),
-				sdf.Translate3d(sdf.V3{distanceFromCenter, 0, 0}),
-			),
-			sdf.Transform3D(
-				sdf.Revolve3D(pusherNibHole2D),
-				sdf.RotateZ(sdf.Tau/3).Mul(
-					sdf.Translate3d(sdf.V3{distanceFromCenter, 0, 0}),
-				),
-			),
-		)
-
-		pusherTracks[n] = sdf.Transform3D(
-			track,
-			sdf.RotateZ(startAngle).Mul(
-				sdf.Translate3d(sdf.V3{0, 0, -tumblerFaceEdgeLength / 2}),
-			),
-		)
-	}
-
-	tracks := sdf.Union3D(pusherTracks...)
-	nibs := sdf.Union3D(pusherNibs...)
-	holes := sdf.Union3D(bearingHole, tracks)
-	tumbler := sdf.Difference3D(tumblerOutside, holes)
-	tumbler = sdf.Union3D(tumbler, nibs)
-
-	sdf.RenderSTL(tumbler, 200, "tumbler.stl")
-
-}
-
-func pusherNibProfile(size float64) sdf.SDF2 {
-	return sdf.Polygon2D([]sdf.V2{
-		{-size / 2, 0},
-		{-size / 2, size},
-		{0, size * 1.5},
-		{size / 2, size},
-		{size / 2, 0},
-		{-size / 2, 0},
-	})
+	return bearingHole
 }
