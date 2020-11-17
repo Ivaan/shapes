@@ -10,29 +10,25 @@ import (
 //-----------------------------------------------------------------------------
 
 func main() {
-	useBearings := true //false means direct on shaft
 	tumblerFaceEdgeWidth := 75.0
 	tumblerFaceEdgeHeight := tumblerFaceEdgeWidth / 3
 	tumblerRadius := tumblerFaceEdgeWidth / 2 / math.Cos(sdf.Tau/12)
 	tumblerCornerRound := tumblerRadius * 0.05
+	//tumblerShortRadius := math.Sqrt(tumblerRadius*tumblerRadius - (tumblerFaceEdgeWidth/2)*(tumblerFaceEdgeWidth/2))
 	tumblerSpacing := 1.0
-	tumblerShortRadius := math.Sqrt(tumblerRadius*tumblerRadius - (tumblerFaceEdgeWidth/2)*(tumblerFaceEdgeWidth/2))
-	tumblerMinimumWallThickness := 2.0
 
 	bearingOD := 22.0
+	bearingID := 8.0
 	bearingThickness := 7.0
 	bearingHolderStopConstriction := 1.0 //horizontle and vertical chamfer distance
 	bearingHolderTolerance := 0.1
 	bearingHolderThickness := 4.0
 
 	shaftOD := 6.35
-	tumblerShaftTollerance := 0.4
-	tumblerShaftBearingSurfaceLength := 5.0 //length of shaft touched by tumbler and either end
-	spacerThickness := 5.0
-	spacerChamfer := 1.0
 	spacerShaftTollerance := 0.3
-	spacerTumblerTollerance := 0.5
-	spacerEdgeInFromTumblerEdge := 1.0
+	spacerBearingTollerance := 0.0
+	spacerGapAngle := 3.0 / 360.0 * sdf.Tau
+	spacerBearingPenetrationDepth := 3.0
 
 	pusherNibSize := 3.0
 	pusherLength := 8.5
@@ -40,24 +36,21 @@ func main() {
 
 	tumblerOutside := makeTumblerOutside(tumblerRadius, tumblerCornerRound, tumblerFaceEdgeWidth, tumblerFaceEdgeHeight)
 
-	var insideHole sdf.SDF3
-	if useBearings {
-		insideHole = makeBearingHole(bearingOD, bearingThickness, bearingHolderStopConstriction, bearingHolderTolerance, tumblerFaceEdgeWidth, tumblerFaceEdgeHeight)
-	} else {
-		insideHole = makeShaftAndSpacerHole(shaftOD, tumblerShaftTollerance, tumblerShaftBearingSurfaceLength, spacerThickness, spacerShaftTollerance, spacerEdgeInFromTumblerEdge, spacerTumblerTollerance, tumblerFaceEdgeWidth, tumblerFaceEdgeHeight, tumblerShortRadius, tumblerSpacing, tumblerMinimumWallThickness)
-	}
+	insideHole := makeBearingHole(bearingOD, bearingThickness, bearingHolderStopConstriction, bearingHolderTolerance, tumblerFaceEdgeWidth, tumblerFaceEdgeHeight)
 
 	tracks, nibs := makePusherTracksAndNibs(pusherNibSize, pusherLength, tumblerRadius, bearingOD/2+bearingHolderThickness, tumblerFaceEdgeWidth, tumblerFaceEdgeHeight, tumblerSpacing, pusherTollerance)
 
 	holes := sdf.Union3D(insideHole, tracks)
 	tumbler := sdf.Difference3D(tumblerOutside, holes)
 	tumbler = sdf.Union3D(tumbler, nibs)
-	spacerDisk := makeSpacerDisk(shaftOD, spacerThickness, spacerChamfer, spacerShaftTollerance, spacerEdgeInFromTumblerEdge, spacerTumblerTollerance, tumblerShortRadius)
 
-	sdf.RenderSTLSlow(tumbler, 400, "tumbler.stl")
+	spacerDisk := makeSpacerDisk(shaftOD, spacerShaftTollerance, bearingID, spacerBearingTollerance, spacerBearingPenetrationDepth, tumblerSpacing, spacerGapAngle)
+
+	//sdf.RenderSTLSlow(tumbler, 400, "tumbler.stl")
 	//sdf.RenderSTLSlow(spacerDisk, 400, "spacerDisk.stl")
 	//sdf.RenderSTL(tumbler, 200, "tumbler.stl")
 	sdf.RenderSTL(spacerDisk, 200, "spacerDisk.stl")
+	sdf.RenderSTL(makeHexTexturePlane(25, 25, 2, 3), 200, "hexPlane.stl")
 
 }
 
@@ -178,17 +171,57 @@ func makeShaftAndSpacerHole(shaftOD, tumblerShaftTollerance, tumblerShaftBearing
 		}),
 	)
 }
-func makeSpacerDisk(shaftOD, spacerThickness, spacerChamfer, spacerShaftTollerance, spacerEdgeInFromTumblerEdge, spacerTumblerTollerance, tumblerShortRadius float64) sdf.SDF3 {
-	return sdf.Difference3D(
-		sdf.Cylinder3D(spacerThickness, tumblerShortRadius-spacerEdgeInFromTumblerEdge-spacerTumblerTollerance, 0),
-		sdf.Union3D(
-			sdf.Cylinder3D(spacerThickness, shaftOD/2+spacerShaftTollerance, 0),
-			sdf.Transform3D(
-				sdf.Cone3D(spacerChamfer, shaftOD/2+spacerShaftTollerance, shaftOD/2+spacerShaftTollerance+spacerChamfer, 0),
-				sdf.Translate3d(sdf.V3{0, 0, (spacerThickness - spacerChamfer) / 2}),
-			),
-		),
+
+func makeSpacerDisk(shaftOD, spacerShaftTollerance, bearingID, spacerBearingTollerance, spacerBearingPenetrationDepth, tumblerSpacing, spacerGapAngle float64) sdf.SDF3 {
+	spacerHeight := spacerBearingPenetrationDepth*2 + tumblerSpacing
+	return sdf.RevolveTheta3D(
+		sdf.Polygon2D([]sdf.V2{
+			{shaftOD/2 + spacerShaftTollerance, -spacerHeight / 2},
+			{bearingID/2 - spacerBearingTollerance, -spacerHeight / 2},
+			{bearingID/2 - spacerBearingTollerance, -spacerHeight/2 + spacerBearingPenetrationDepth},
+			{bearingID/2 - spacerBearingTollerance + tumblerSpacing/2, -spacerHeight/2 + spacerBearingPenetrationDepth + tumblerSpacing/2},
+			{bearingID/2 - spacerBearingTollerance, -spacerHeight/2 + spacerBearingPenetrationDepth + tumblerSpacing},
+			{bearingID/2 - spacerBearingTollerance, -spacerHeight/2 + spacerBearingPenetrationDepth*2 + tumblerSpacing},
+			{shaftOD/2 + spacerShaftTollerance, -spacerHeight/2 + spacerBearingPenetrationDepth*2 + tumblerSpacing},
+			{shaftOD/2 + spacerShaftTollerance, -spacerHeight / 2},
+		}),
+		sdf.Tau-spacerGapAngle,
 	)
+}
+
+func makeHexTexturePlane(length, width, thickness, hexRadius float64) sdf.SDF3 {
+	minorRadius := math.Cos(sdf.Tau/12) * hexRadius
+	hex := sdf.Polygon2D(sdf.Nagon(6, hexRadius))
+	cell := sdf.Extrude3D(hex, thickness)
+	cell = sdf.Transform3D(
+		cell,
+		sdf.RotateX(math.Atan(thickness/2/minorRadius)),
+	)
+
+	startX := -length / 2 //we can center later
+	startY := -width / 2  //we can center later
+	countX := int(math.Ceil(length/(hexRadius*1.5)) + 1)
+	countY := int(math.Ceil(width/(minorRadius*2)) + 1)
+	incrementX := hexRadius * 1.5
+	incrementY := minorRadius * 2 // math.Sqrt(minorRadius*minorRadius+thickness*thickness) * 2
+
+	cells := make([]sdf.SDF3, countX*countY)
+
+	for x := 0; x < countX; x++ {
+		for y := 0; y < countY; y++ {
+			cells[x*countY+y] = sdf.Transform3D(
+				cell,
+				sdf.Translate3d(sdf.V3{startX + float64(x)*incrementX, startY + float64(y)*incrementY - (float64(x%2) * incrementY / 2), 0}),
+			)
+		}
+	}
+
+	return sdf.Intersect3D(
+		sdf.Union3D(cells...),
+		sdf.Box3D(sdf.V3{length, width, thickness * 2}, 0),
+	)
+	//return sdf.Union3D(cells...)
+
 }
 
 /*
