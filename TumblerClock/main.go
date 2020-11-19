@@ -25,16 +25,21 @@ func main() {
 	bearingHolderThickness := 4.0
 
 	shaftOD := 6.35
-	spacerShaftTollerance := 0.3
-	spacerBearingTollerance := 0.0
-	spacerGapAngle := 3.0 / 360.0 * sdf.Tau
-	spacerBearingPenetrationDepth := 3.0
+	spacerShaftTollerance := 0.2
+	spacerBearingTollerance := 0.1
+	spacerGapAngle := 6.0 / 360.0 * sdf.Tau
+	spacerBearingPenetrationDepth := 2.5
 
 	pusherNibSize := 3.0
 	pusherLength := 8.5
 	pusherTollerance := 1.5
 
-	tumblerOutside := makeTumblerOutside(tumblerRadius, tumblerCornerRound, tumblerFaceEdgeWidth, tumblerFaceEdgeHeight)
+	// A
+	// 001
+	// 101
+	// 111
+	tumblerOutside := makeTumblerOutside(tumblerRadius, tumblerCornerRound, tumblerFaceEdgeWidth, tumblerFaceEdgeHeight, [9]int{0, 0, 1, 1, 0, 1, 1, 1, 1})
+	//tumblerOutside := makeTumblerOutside(tumblerRadius, tumblerCornerRound, tumblerFaceEdgeWidth, tumblerFaceEdgeHeight, [9]int{1, 1, 1, 1, 1, 1, 1, 1, 1})
 
 	insideHole := makeBearingHole(bearingOD, bearingThickness, bearingHolderStopConstriction, bearingHolderTolerance, tumblerFaceEdgeWidth, tumblerFaceEdgeHeight)
 
@@ -47,19 +52,63 @@ func main() {
 	spacerDisk := makeSpacerDisk(shaftOD, spacerShaftTollerance, bearingID, spacerBearingTollerance, spacerBearingPenetrationDepth, tumblerSpacing, spacerGapAngle)
 
 	//sdf.RenderSTLSlow(tumbler, 400, "tumbler.stl")
-	//sdf.RenderSTLSlow(spacerDisk, 400, "spacerDisk.stl")
+	sdf.RenderSTLSlow(spacerDisk, 100, "spacerDisk.stl")
 	//sdf.RenderSTL(tumbler, 200, "tumbler.stl")
-	sdf.RenderSTL(spacerDisk, 200, "spacerDisk.stl")
-	sdf.RenderSTL(makeHexTexturePlane(25, 25, 2, 3), 200, "hexPlane.stl")
+	//sdf.RenderSTL(spacerDisk, 50, "spacerDisk.stl")
 
 }
 
-func makeTumblerOutside(tumblerRadius, tumblerCornerRound, tumblerFaceEdgeWidth, tumblerFaceEdgeHeight float64) sdf.SDF3 {
+func makeTumblerOutside(tumblerRadius, tumblerCornerRound, tumblerFaceEdgeWidth, tumblerFaceEdgeHeight float64, faces [9]int) sdf.SDF3 {
 	//tumbler, triangle outside, bearing holder hole inside
 	// triangle is an extruded 3 nagon
 	triangle := sdf.Polygon2D(sdf.Nagon(3, tumblerRadius-tumblerCornerRound))
 	triangle = sdf.Offset2D(triangle, tumblerCornerRound)
 	tumblerOutside := sdf.Extrude3D(triangle, tumblerFaceEdgeHeight)
+
+	textureWidth := (tumblerFaceEdgeWidth - 2.0*tumblerCornerRound) / 3.0
+	texture := sdf.Transform3D(
+		makeHexTexturePlane(textureWidth, tumblerFaceEdgeHeight, 2, 3),
+		sdf.RotateX(sdf.Tau/4),
+	)
+	textureOff := sdf.Transform3D(
+		texture,
+		sdf.Translate3d(sdf.V3{textureWidth / 2.0, -tumblerCornerRound, 0}),
+	)
+	textureOn := sdf.Transform3D(
+		texture,
+		sdf.Translate3d(sdf.V3{textureWidth / 2.0, -tumblerCornerRound, 0}).Mul( //shift to possition 0 on face
+			sdf.RotateY(sdf.Tau/2.0), //flip for 1
+		),
+	)
+
+	//		sdf.Translate3d(sdf.V3{textureWidth/2.0 + tumblerCornerRound, 0, 0}).Mul(
+
+	for face := 0; face < 3; face++ {
+		for possition := 0; possition < 3; possition++ {
+			textureToAdd := textureOff
+			if faces[face*3+possition] == 1 {
+				textureToAdd = textureOn
+			}
+
+			faceToAdd := sdf.Transform3D(
+				textureToAdd,
+				sdf.RotateZ(sdf.Tau*float64(face)/3.0).Mul( //rotate to face
+					sdf.Translate3d(sdf.V3{tumblerRadius - tumblerCornerRound, 0, 0}).Mul( //translate to first face
+						sdf.RotateZ(sdf.Tau*5.0/12.0).Mul( //allign to first face
+							sdf.Translate3d(sdf.V3{float64(possition) * textureWidth, 0, 0}), //shift to possition on face
+						),
+					),
+				),
+			)
+			if possition == 1 {
+				tumblerOutside = sdf.Union3D(tumblerOutside, faceToAdd)
+			} else {
+				tumblerOutside = sdf.Difference3D(tumblerOutside, faceToAdd)
+			}
+
+		}
+	}
+
 	return tumblerOutside
 }
 
