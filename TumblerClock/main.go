@@ -15,20 +15,21 @@ func main() {
 	tumblerRadius := tumblerFaceEdgeWidth / 2 / math.Cos(sdf.Tau/12)
 	tumblerCornerRound := tumblerRadius * 0.05
 	//tumblerShortRadius := math.Sqrt(tumblerRadius*tumblerRadius - (tumblerFaceEdgeWidth/2)*(tumblerFaceEdgeWidth/2))
-	tumblerSpacing := 1.0
+	tumblerSpacing := 2.0
 
 	bearingOD := 22.0
-	bearingID := 8.0
+	//bearingID := 8.0
 	bearingThickness := 7.0
 	bearingHolderStopConstriction := 1.0 //horizontle and vertical chamfer distance
 	bearingHolderTolerance := 0.1
 	bearingHolderThickness := 4.0
 
-	shaftOD := 6.35
-	spacerShaftTollerance := 0.2
-	spacerBearingTollerance := 0.1
+	shaftOD := 8.0
+	spacerShaftTollerance := -0.2
+	//spacerBearingTollerance := 0.1
 	spacerGapAngle := 6.0 / 360.0 * sdf.Tau
-	spacerBearingPenetrationDepth := 2.5
+	spacerDiskWidth := 2.5
+	//spacerBearingPenetrationDepth := 0.0
 
 	pusherNibSize := 3.0
 	pusherLength := 8.5
@@ -38,10 +39,17 @@ func main() {
 	// 001
 	// 101
 	// 111
-	tumblerOutside := makeTumblerOutside(tumblerRadius, tumblerCornerRound, tumblerFaceEdgeWidth, tumblerFaceEdgeHeight, [9]int{0, 0, 1, 1, 0, 1, 1, 1, 1})
+	// B
+	// 001
+	// 100
+	// 101
+	//faces := [9]int{0, 0, 1, 1, 0, 1, 1, 1, 1} // A faces
+	faces := [9]int{0, 0, 1, 1, 0, 0, 1, 0, 1} // B faces
+	tumblerOutside := makeTumblerOutside(tumblerRadius, tumblerCornerRound, tumblerFaceEdgeWidth, tumblerFaceEdgeHeight, faces)
 	//tumblerOutside := makeTumblerOutside(tumblerRadius, tumblerCornerRound, tumblerFaceEdgeWidth, tumblerFaceEdgeHeight, [9]int{1, 1, 1, 1, 1, 1, 1, 1, 1})
 
 	insideHole := makeBearingHole(bearingOD, bearingThickness, bearingHolderStopConstriction, bearingHolderTolerance, tumblerFaceEdgeWidth, tumblerFaceEdgeHeight)
+	//sdf.Elongate3D
 
 	tracks, nibs := makePusherTracksAndNibs(pusherNibSize, pusherLength, tumblerRadius, bearingOD/2+bearingHolderThickness, tumblerFaceEdgeWidth, tumblerFaceEdgeHeight, tumblerSpacing, pusherTollerance)
 
@@ -49,12 +57,13 @@ func main() {
 	tumbler := sdf.Difference3D(tumblerOutside, holes)
 	tumbler = sdf.Union3D(tumbler, nibs)
 
-	spacerDisk := makeSpacerDisk(shaftOD, spacerShaftTollerance, bearingID, spacerBearingTollerance, spacerBearingPenetrationDepth, tumblerSpacing, spacerGapAngle)
+	//spacerDisk := makeSpacerDisk(shaftOD, spacerShaftTollerance, bearingID, spacerBearingTollerance, spacerBearingPenetrationDepth, tumblerSpacing, spacerGapAngle)
+	spacerDisk := makeSimpleSpacerDisk(shaftOD, spacerShaftTollerance, spacerDiskWidth, tumblerSpacing, spacerGapAngle)
 
-	//sdf.RenderSTLSlow(tumbler, 400, "tumbler.stl")
-	sdf.RenderSTLSlow(spacerDisk, 100, "spacerDisk.stl")
-	//sdf.RenderSTL(tumbler, 200, "tumbler.stl")
-	//sdf.RenderSTL(spacerDisk, 50, "spacerDisk.stl")
+	//sdf.RenderSTLSlow(tumbler, 400, "tumblerB.stl")
+	//sdf.RenderSTLSlow(spacerDisk, 100, "spacerDisk.stl")
+	sdf.RenderSTL(tumbler, 200, "tumbler.stl")
+	sdf.RenderSTL(spacerDisk, 400, "spacerDiskWood.stl")
 
 }
 
@@ -66,18 +75,19 @@ func makeTumblerOutside(tumblerRadius, tumblerCornerRound, tumblerFaceEdgeWidth,
 	tumblerOutside := sdf.Extrude3D(triangle, tumblerFaceEdgeHeight)
 
 	textureWidth := (tumblerFaceEdgeWidth - 2.0*tumblerCornerRound) / 3.0
-	texture := sdf.Transform3D(
-		makeHexTexturePlane(textureWidth, tumblerFaceEdgeHeight, 2, 3),
-		sdf.RotateX(sdf.Tau/4),
-	)
+
 	textureOff := sdf.Transform3D(
-		texture,
-		sdf.Translate3d(sdf.V3{textureWidth / 2.0, -tumblerCornerRound, 0}),
+		makeUnTexturedPlane(textureWidth, tumblerFaceEdgeHeight, 2),
+		sdf.Translate3d(sdf.V3{textureWidth / 2.0, -tumblerCornerRound, 0}).Mul( //shift to possition 0 on face
+			sdf.RotateX(sdf.Tau/4),
+		),
 	)
 	textureOn := sdf.Transform3D(
-		texture,
+		makeHexTexturePlane(textureWidth, tumblerFaceEdgeHeight, 2, 3),
 		sdf.Translate3d(sdf.V3{textureWidth / 2.0, -tumblerCornerRound, 0}).Mul( //shift to possition 0 on face
-			sdf.RotateY(sdf.Tau/2.0), //flip for 1
+			sdf.RotateY(sdf.Tau/2.0).Mul( //flip for 1
+				sdf.RotateX(sdf.Tau/4),
+			),
 		),
 	)
 
@@ -235,6 +245,26 @@ func makeSpacerDisk(shaftOD, spacerShaftTollerance, bearingID, spacerBearingToll
 			{shaftOD/2 + spacerShaftTollerance, -spacerHeight / 2},
 		}),
 		sdf.Tau-spacerGapAngle,
+	)
+}
+
+func makeSimpleSpacerDisk(shaftOD, spacerShaftTollerance, diskWidth, tumblerSpacing, spacerGapAngle float64) sdf.SDF3 {
+	return sdf.RevolveTheta3D(
+		sdf.Polygon2D([]sdf.V2{
+			{shaftOD/2 + spacerShaftTollerance, 0},
+			{shaftOD/2 + spacerShaftTollerance + diskWidth, 0},
+			{shaftOD/2 + spacerShaftTollerance + diskWidth, tumblerSpacing},
+			{shaftOD/2 + spacerShaftTollerance, tumblerSpacing},
+			{shaftOD/2 + spacerShaftTollerance, 0},
+		}),
+		sdf.Tau-spacerGapAngle,
+	)
+}
+
+func makeUnTexturedPlane(length, width, thickness float64) sdf.SDF3 {
+	return sdf.Transform3D(
+		sdf.Box3D(sdf.V3{length, width, thickness}, 0),
+		sdf.RotateX(math.Atan(thickness/width)),
 	)
 }
 
