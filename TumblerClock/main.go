@@ -4,36 +4,14 @@ import (
 	"fmt"
 	"math"
 
+	//"gopkg.in/yaml.v3"
 	"github.com/deadsy/sdfx/sdf"
 )
 
 //-----------------------------------------------------------------------------
 
 func main() {
-	tumblerFaceEdgeWidth := 75.0
-	tumblerFaceEdgeHeight := tumblerFaceEdgeWidth / 3
-	tumblerRadius := tumblerFaceEdgeWidth / 2 / math.Cos(sdf.Tau/12)
-	tumblerCornerRound := tumblerRadius * 0.05
-	//tumblerShortRadius := math.Sqrt(tumblerRadius*tumblerRadius - (tumblerFaceEdgeWidth/2)*(tumblerFaceEdgeWidth/2))
-	tumblerSpacing := 2.0
-
-	bearingOD := 22.0
-	//bearingID := 8.0
-	bearingThickness := 7.0
-	bearingHolderStopConstriction := 1.0 //horizontle and vertical chamfer distance
-	bearingHolderTolerance := 0.1
-	bearingHolderThickness := 4.0
-
-	shaftOD := 8.0
-	spacerShaftTollerance := -0.2
-	//spacerBearingTollerance := 0.1
-	spacerGapAngle := 6.0 / 360.0 * sdf.Tau
-	spacerDiskWidth := 2.5
-	//spacerBearingPenetrationDepth := 0.0
-
-	pusherNibSize := 3.0
-	pusherLength := 8.5
-	pusherTollerance := 1.5
+	setup := makeDefaultClockSetup()
 
 	// A
 	// 001
@@ -43,48 +21,51 @@ func main() {
 	// 001
 	// 100
 	// 101
-	//faces := [9]int{0, 0, 1, 1, 0, 1, 1, 1, 1} // A faces
-	faces := [9]int{0, 0, 1, 1, 0, 0, 1, 0, 1} // B faces
-	tumblerOutside := makeTumblerOutside(tumblerRadius, tumblerCornerRound, tumblerFaceEdgeWidth, tumblerFaceEdgeHeight, faces)
-	//tumblerOutside := makeTumblerOutside(tumblerRadius, tumblerCornerRound, tumblerFaceEdgeWidth, tumblerFaceEdgeHeight, [9]int{1, 1, 1, 1, 1, 1, 1, 1, 1})
+	facesA := [9]int{0, 0, 1, 1, 0, 1, 1, 1, 1} // A faces
+	facesB := [9]int{0, 0, 1, 1, 0, 0, 1, 0, 1} // B faces
+	tumblerOutsideA := makeTumblerOutside(setup.Tumbler, facesA)
+	tumblerOutsideB := makeTumblerOutside(setup.Tumbler, facesB)
 
-	insideHole := makeBearingHole(bearingOD, bearingThickness, bearingHolderStopConstriction, bearingHolderTolerance, tumblerFaceEdgeWidth, tumblerFaceEdgeHeight)
-	//sdf.Elongate3D
+	insideHole := makeBearingHole(setup.Bearing, setup.BearingHolder, setup.Tumbler)
 
-	tracks, nibs := makePusherTracksAndNibs(pusherNibSize, pusherLength, tumblerRadius, bearingOD/2+bearingHolderThickness, tumblerFaceEdgeWidth, tumblerFaceEdgeHeight, tumblerSpacing, pusherTollerance)
+	tracks, nibs := makePusherTracksAndNibs(setup.Transmission, setup.Tumbler, setup.Bearing.OD/2+setup.BearingHolder.Thickness)
 
 	holes := sdf.Union3D(insideHole, tracks)
-	tumbler := sdf.Difference3D(tumblerOutside, holes)
-	tumbler = sdf.Union3D(tumbler, nibs)
+	tumblerA := sdf.Difference3D(tumblerOutsideA, holes)
+	tumblerA = sdf.Union3D(tumblerA, nibs)
+
+	tumblerB := sdf.Difference3D(tumblerOutsideB, holes)
+	tumblerB = sdf.Union3D(tumblerB, nibs)
 
 	//spacerDisk := makeSpacerDisk(shaftOD, spacerShaftTollerance, bearingID, spacerBearingTollerance, spacerBearingPenetrationDepth, tumblerSpacing, spacerGapAngle)
-	spacerDisk := makeSimpleSpacerDisk(shaftOD, spacerShaftTollerance, spacerDiskWidth, tumblerSpacing, spacerGapAngle)
-
-	//sdf.RenderSTLSlow(tumbler, 400, "tumblerB.stl")
+	spacerDisk := makeSimpleSpacerDisk(setup.Shaft, setup.Spacer, setup.Tumbler)
+	// sdf.RenderSTLSlow(tumblerA, 400, "tumblerA.stl")
+	// sdf.RenderSTLSlow(tumblerB, 400, "tumblerB.stl")
 	//sdf.RenderSTLSlow(spacerDisk, 100, "spacerDisk.stl")
-	sdf.RenderSTL(tumbler, 200, "tumbler.stl")
+	sdf.RenderSTL(tumblerA, 200, "tumblerA.stl")
+	sdf.RenderSTL(tumblerB, 200, "tumblerB.stl")
 	sdf.RenderSTL(spacerDisk, 400, "spacerDiskWood.stl")
 
 }
 
-func makeTumblerOutside(tumblerRadius, tumblerCornerRound, tumblerFaceEdgeWidth, tumblerFaceEdgeHeight float64, faces [9]int) sdf.SDF3 {
+func makeTumblerOutside(tumbler Tumbler, faces [9]int) sdf.SDF3 {
 	//tumbler, triangle outside, bearing holder hole inside
 	// triangle is an extruded 3 nagon
-	triangle := sdf.Polygon2D(sdf.Nagon(3, tumblerRadius-tumblerCornerRound))
-	triangle = sdf.Offset2D(triangle, tumblerCornerRound)
-	tumblerOutside := sdf.Extrude3D(triangle, tumblerFaceEdgeHeight)
+	triangle := sdf.Polygon2D(sdf.Nagon(3, tumbler.Radius-tumbler.CornerRound))
+	triangle = sdf.Offset2D(triangle, tumbler.CornerRound)
+	tumblerOutside := sdf.Extrude3D(triangle, tumbler.FaceEdgeHeight)
 
-	textureWidth := (tumblerFaceEdgeWidth - 2.0*tumblerCornerRound) / 3.0
+	textureWidth := (tumbler.FaceEdgeWidth - 2.0*tumbler.CornerRound) / 3.0
 
 	textureOff := sdf.Transform3D(
-		makeUnTexturedPlane(textureWidth, tumblerFaceEdgeHeight, 2),
-		sdf.Translate3d(sdf.V3{textureWidth / 2.0, -tumblerCornerRound, 0}).Mul( //shift to possition 0 on face
+		makeUnTexturedPlane(textureWidth, tumbler.FaceEdgeHeight, 2),
+		sdf.Translate3d(sdf.V3{textureWidth / 2.0, -tumbler.CornerRound, 0}).Mul( //shift to possition 0 on face
 			sdf.RotateX(sdf.Tau/4),
 		),
 	)
 	textureOn := sdf.Transform3D(
-		makeHexTexturePlane(textureWidth, tumblerFaceEdgeHeight, 2, 3),
-		sdf.Translate3d(sdf.V3{textureWidth / 2.0, -tumblerCornerRound, 0}).Mul( //shift to possition 0 on face
+		makeHexTexturePlane(textureWidth, tumbler.FaceEdgeHeight, 2, 3),
+		sdf.Translate3d(sdf.V3{textureWidth / 2.0, -tumbler.CornerRound, 0}).Mul( //shift to possition 0 on face
 			sdf.RotateY(sdf.Tau/2.0).Mul( //flip for 1
 				sdf.RotateX(sdf.Tau/4),
 			),
@@ -103,7 +84,7 @@ func makeTumblerOutside(tumblerRadius, tumblerCornerRound, tumblerFaceEdgeWidth,
 			faceToAdd := sdf.Transform3D(
 				textureToAdd,
 				sdf.RotateZ(sdf.Tau*float64(face)/3.0).Mul( //rotate to face
-					sdf.Translate3d(sdf.V3{tumblerRadius - tumblerCornerRound, 0, 0}).Mul( //translate to first face
+					sdf.Translate3d(sdf.V3{tumbler.Radius - tumbler.CornerRound, 0, 0}).Mul( //translate to first face
 						sdf.RotateZ(sdf.Tau*5.0/12.0).Mul( //allign to first face
 							sdf.Translate3d(sdf.V3{float64(possition) * textureWidth, 0, 0}), //shift to possition on face
 						),
@@ -133,20 +114,18 @@ func pusherNibProfile(width, height float64) sdf.SDF2 {
 	})
 }
 
-func makePusherTracksAndNibs(pusherNibSize, pusherLength, tumblerRadius, innerClearance, tumblerFaceEdgeWidth, tumblerFaceEdgeHeight, tumblerSpacing, pusherTollerance float64) (sdf.SDF3, sdf.SDF3) {
-	pusher2D := pusherNibProfile(pusherNibSize, pusherNibSize+tumblerSpacing)
-	track2D := pusherNibProfile(pusherNibSize+pusherTollerance/2, pusherNibSize+tumblerSpacing+pusherTollerance)
+func makePusherTracksAndNibs(transmission Transmission, tumbler Tumbler, innerClearance float64) (sdf.SDF3, sdf.SDF3) {
+	pusher2D := pusherNibProfile(transmission.NibSize, transmission.NibSize+tumbler.Spacing)
+	track2D := pusherNibProfile(transmission.NibSize+transmission.TrackTollerance/2, transmission.NibSize+tumbler.Spacing+transmission.TrackTollerance)
 
 	pushers := make([]sdf.SDF3, 3)
 	tracks := make([]sdf.SDF3, 3)
 
 	for n := 0; n < 2; n++ {
-		//distanceFromCenter := (tumblerRadius+innerClearance)/2 + (pusherNibSize-(pusherTollerance/2))*(float64(n-1)) // three tracks one halfway between tumbler radioius and the inner clearance, and one on each side
-		//distanceFromCenter := innerClearance + pusherTollerance + pusherNibSize*(float64(n)) // three tracks
-		distanceFromCenter := innerClearance + pusherTollerance + pusherNibSize*(float64(n)) // two tracks
+		distanceFromCenter := innerClearance + transmission.TrackTollerance + transmission.NibSize*(float64(n)) // two tracks
 		startAngle := float64(n+1) * sdf.Tau / 2
 
-		pusherArcAngle := pusherLength / distanceFromCenter
+		pusherArcAngle := transmission.NibLength / distanceFromCenter
 
 		pushers[n] = sdf.Transform3D(
 			sdf.RevolveTheta3D(
@@ -157,7 +136,7 @@ func makePusherTracksAndNibs(pusherNibSize, pusherLength, tumblerRadius, innerCl
 				pusherArcAngle,
 			),
 			sdf.RotateZ(startAngle-pusherArcAngle/2).Mul(
-				sdf.Translate3d(sdf.V3{0, 0, tumblerFaceEdgeHeight / 2}),
+				sdf.Translate3d(sdf.V3{0, 0, tumbler.FaceEdgeHeight / 2}),
 			),
 		)
 
@@ -170,7 +149,7 @@ func makePusherTracksAndNibs(pusherNibSize, pusherLength, tumblerRadius, innerCl
 				2.0*sdf.Tau/3.0+pusherArcAngle,
 			),
 			sdf.RotateZ(startAngle-pusherArcAngle/2).Mul(
-				sdf.Translate3d(sdf.V3{0, 0, -tumblerFaceEdgeHeight / 2}),
+				sdf.Translate3d(sdf.V3{0, 0, -tumbler.FaceEdgeHeight / 2}),
 			),
 		)
 	}
@@ -182,31 +161,30 @@ func makePusherTracksAndNibs(pusherNibSize, pusherLength, tumblerRadius, innerCl
 //top and bottom are bearing sized cylinders
 //center is constricted cylinder
 //between top and center (and bottom and center) are correctly oriented truncated between bearing and constricted sized cylinders
-func makeBearingHole(bearingOD, bearingThickness, bearingHolderStopConstriction, bearingHolderTolerance, tumblerFaceEdgeWidth, tumblerFaceEdgeHeight float64) sdf.SDF3 {
+func makeBearingHole(bearing Bearing, bearingHolder BearingHolder, tumbler Tumbler) sdf.SDF3 {
 
-	bearingHolder := sdf.Cylinder3D(bearingThickness, bearingOD/2+bearingHolderTolerance, 0)
+	bearingHole := sdf.Cylinder3D(bearing.Thickness, bearing.OD/2+bearingHolder.Tolerance, 0)
 	chamfer3d := sdf.Cone3D(
-		bearingHolderStopConstriction,
-		bearingOD/2+bearingHolderTolerance-bearingHolderStopConstriction,
-		bearingOD/2+bearingHolderTolerance,
+		bearingHolder.StopConstriction,
+		bearing.OD/2+bearingHolder.Tolerance-bearingHolder.StopConstriction,
+		bearing.OD/2+bearingHolder.Tolerance,
 		0,
 	)
-	constricted := sdf.Cylinder3D(tumblerFaceEdgeHeight-2*bearingThickness, bearingOD/2+bearingHolderTolerance-bearingHolderStopConstriction, 0)
+	constricted := sdf.Cylinder3D(tumbler.FaceEdgeHeight-2*bearing.Thickness, bearing.OD/2+bearingHolder.Tolerance-bearingHolder.StopConstriction, 0)
 
 	topBearingHolder := sdf.Transform3D(
-		bearingHolder,
-		sdf.Translate3d(sdf.V3{0, 0, tumblerFaceEdgeHeight/2 - bearingThickness/2}),
+		bearingHole,
+		sdf.Translate3d(sdf.V3{0, 0, tumbler.FaceEdgeHeight/2 - bearing.Thickness/2}),
 	)
 	topChamfer3d := sdf.Transform3D(
 		chamfer3d,
-		sdf.Translate3d(sdf.V3{0, 0, tumblerFaceEdgeHeight/2 - bearingThickness - bearingHolderStopConstriction/2}),
+		sdf.Translate3d(sdf.V3{0, 0, tumbler.FaceEdgeHeight/2 - bearing.Thickness - bearingHolder.StopConstriction/2}),
 	)
 	flip := sdf.RotateX(sdf.Tau / 2)
 	bottomBearingHolder := sdf.Transform3D(topBearingHolder, flip)
 	bottomChamfer3d := sdf.Transform3D(topChamfer3d, flip)
 
-	bearingHole := sdf.Union3D(topBearingHolder, topChamfer3d, constricted, bottomChamfer3d, bottomBearingHolder)
-	return bearingHole
+	return sdf.Union3D(topBearingHolder, topChamfer3d, constricted, bottomChamfer3d, bottomBearingHolder)
 }
 
 func makeShaftAndSpacerHole(shaftOD, tumblerShaftTollerance, tumblerShaftBearingSurfaceLength, spacerThickness, spacerShaftTollerance, spacerEdgeInFromTumblerEdge, spacerTumblerTollerance, tumblerFaceEdgeWidth, tumblerFaceEdgeHeight, tumblerShortRadius, tumblerSpacing, tumblerMinimumWallThickness float64) sdf.SDF3 {
@@ -248,16 +226,16 @@ func makeSpacerDisk(shaftOD, spacerShaftTollerance, bearingID, spacerBearingToll
 	)
 }
 
-func makeSimpleSpacerDisk(shaftOD, spacerShaftTollerance, diskWidth, tumblerSpacing, spacerGapAngle float64) sdf.SDF3 {
+func makeSimpleSpacerDisk(shaft Shaft, spacer Spacer, tumbler Tumbler) sdf.SDF3 {
 	return sdf.RevolveTheta3D(
 		sdf.Polygon2D([]sdf.V2{
-			{shaftOD/2 + spacerShaftTollerance, 0},
-			{shaftOD/2 + spacerShaftTollerance + diskWidth, 0},
-			{shaftOD/2 + spacerShaftTollerance + diskWidth, tumblerSpacing},
-			{shaftOD/2 + spacerShaftTollerance, tumblerSpacing},
-			{shaftOD/2 + spacerShaftTollerance, 0},
+			{shaft.OD/2 + spacer.ShaftTollerance, 0},
+			{shaft.OD/2 + spacer.ShaftTollerance + spacer.DiskWidth, 0},
+			{shaft.OD/2 + spacer.ShaftTollerance + spacer.DiskWidth, tumbler.Spacing},
+			{shaft.OD/2 + spacer.ShaftTollerance, tumbler.Spacing},
+			{shaft.OD/2 + spacer.ShaftTollerance, 0},
 		}),
-		sdf.Tau-spacerGapAngle,
+		sdf.Tau-spacer.GapAngle,
 	)
 }
 
