@@ -1,26 +1,37 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"io/ioutil"
 	"math"
 
-	//"gopkg.in/yaml.v3"
 	"github.com/deadsy/sdfx/sdf"
+	"gopkg.in/yaml.v3"
 )
 
 //-----------------------------------------------------------------------------
 
 func main() {
-	setup := makeDefaultClockSetup()
+	//setup := makeDefaultClockSetup()
+	//bytes, _ := yaml.Marshal(setup)
+	//ioutil.WriteFile("setup.yaml", bytes, 0644)
 
-	// A
-	// 001
-	// 101
-	// 111
-	// B
-	// 001
-	// 100
-	// 101
+	filename := flag.String("SetupFile", "setup.yaml", "File name with the setup for the Tumbler Clock")
+	//partsList := flag.String("Parts", "all", "Parts list to print") //(h|m)(t|u)(a|b|ag|g)
+
+	flag.Parse()
+	yamlFile, err := ioutil.ReadFile(*filename)
+	if err != nil {
+		panic(err)
+	}
+	var setup ClockSetup
+	err = yaml.Unmarshal(yamlFile, &setup)
+	if err != nil {
+		panic(err)
+	}
+	setup = setup.computeSynthetics()
+
 	facesA := [9]int{0, 0, 1, 1, 0, 1, 1, 1, 1} // A faces
 	facesB := [9]int{0, 0, 1, 1, 0, 0, 1, 0, 1} // B faces
 	tumblerOutsideA := makeTumblerOutside(setup.Tumbler, facesA)

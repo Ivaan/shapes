@@ -1,0 +1,20 @@
+tumbler:
+    faceEdgeWidth: 75
+    spacing: 2
+bearing:
+    OD: 22
+    thickness: 7
+bearingholder:
+    stopConstriction: 1
+    tolerance: 0.1
+    thickness: 4
+shaft:
+    OD: 8
+spacer:
+    saftTollerance: -0.2
+    gapAngle: 0.10471975511965978
+    diskWidth: 2.5
+transmission:
+    nibSize: 3
+    length: 8.5
+    trackTollerance: 1.5

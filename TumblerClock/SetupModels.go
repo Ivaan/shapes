@@ -26,7 +26,7 @@ func (c *ClockSetup) computeSynthetics() ClockSetup {
 type Tumbler struct {
 	FaceEdgeWidth  float64 `yaml:"faceEdgeWidth"`
 	FaceEdgeHeight float64
-	Spacing        float64 `yaml:"Spacing"`
+	Spacing        float64 `yaml:"spacing"`
 	Radius         float64
 	CornerRound    float64
 	//tumblerShortRadius float64
@@ -56,7 +56,7 @@ type BearingHolder struct {
 
 //Shaft describes the shaft that runs through the tumblers
 type Shaft struct {
-	OD float64 `yaml:"shaft"`
+	OD float64 `yaml:"OD"`
 }
 
 //Spacer describes the spacer that holds tumblers appart
@@ -71,5 +71,5 @@ type Spacer struct {
 type Transmission struct {
 	NibSize         float64 `yaml:"nibSize"`
 	NibLength       float64 `yaml:"length"`
-	TrackTollerance float64 `yaml:"TrackTollerance"`
+	TrackTollerance float64 `yaml:"trackTollerance"`
 }
