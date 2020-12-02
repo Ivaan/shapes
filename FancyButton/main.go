@@ -19,6 +19,8 @@ func main() {
 		sdf.MultiCylinder3D(TotalHeight*4, 1, sdf.V2Set([]sdf.V2{sdf.V2{3, 0}, sdf.V2{-3, 0}})))
 
 	sdf.RenderSTLSlow(disk, 400, "Button.stl")
+	disk = sdf.Transform3D(disk, sdf.MirrorXY())
+	sdf.RenderSTLSlow(disk, 400, "ButtonFlip.stl")
 }
 
 func repeateAround(solid sdf.SDF3, times int) []sdf.SDF3 {
