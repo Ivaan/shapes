@@ -18,7 +18,7 @@ func main() {
 	//ioutil.WriteFile("setup.yaml", bytes, 0644)
 
 	filename := flag.String("SetupFile", "setup.yaml", "File name with the setup for the Tumbler Clock")
-	//partsList := flag.String("Parts", "all", "Parts list to print") //(h|m)(t|u)(a|b|ag|g)
+	partsString := flag.String("Parts", "all", "Parts list to print") //(h|m)(t|u)(a|b|ag|g)
 
 	flag.Parse()
 	yamlFile, err := ioutil.ReadFile(*filename)
@@ -31,6 +31,9 @@ func main() {
 		panic(err)
 	}
 	setup = setup.computeSynthetics()
+
+	partsList := parsePartsString(*partsString)
+	fmt.Printf("%+v\n", partsList)
 
 	facesA := [9]int{0, 0, 1, 1, 0, 1, 1, 1, 1} // A faces
 	facesB := [9]int{0, 0, 1, 1, 0, 0, 1, 0, 1} // B faces
