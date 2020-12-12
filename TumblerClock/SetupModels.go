@@ -14,6 +14,7 @@ type ClockSetup struct {
 	Shaft
 	Spacer
 	Transmission
+	Gear
 }
 
 func (c *ClockSetup) computeSynthetics() ClockSetup {
@@ -72,4 +73,16 @@ type Transmission struct {
 	NibSize         float64 `yaml:"nibSize"`
 	NibLength       float64 `yaml:"length"`
 	TrackTollerance float64 `yaml:"trackTollerance"`
+}
+
+//Gear describes the details of the gears in the clock
+type Gear struct {
+	Thickness                float64 `yaml:"thickness"`
+	SpaceToTumbler           float64 `yaml:"spaceToTumbler"`
+	backlash                 float64 `yaml:"backlash"`
+	clearance                float64 `yaml:"clearance"`
+	DrivenGearNumberOfTeeth  int     `yaml:"drivenGearNumberOfTeeth"`
+	CouplerGearNumberOfTeeth int     `yaml:"couplerGearNumberOfTeeth"`
+	ColonGearNumberOfTeeth   int     `yaml:"colonGearNumberOfTeeth"`
+	MotorGearNumberOfTeeth   int     `yaml:"motorGearNumberOfTeeth"`
 }

@@ -14,7 +14,7 @@ type partsList struct {
 
 type tumblerPart struct {
 	hours   bool        //other wise minute
-	tens    bool        //otherwise units or ones
+	tens    bool        //otherwise units (aka ones)
 	tumbler tumblerKind //include faces otherwise only gear
 	gear    bool        //include gear otherwise only tumbler (one of tumbler or gear must be true)
 }
@@ -53,6 +53,31 @@ func parsePartsString(partsString string) partsList {
 		}
 	}
 	return parts
+}
+
+func (p *tumblerPart) fileName() string {
+	fn := []rune("")
+	if p.hours {
+		fn = append(fn, 'h')
+	} else {
+		fn = append(fn, 'm')
+	}
+	if p.tens {
+		fn = append(fn, 't')
+	} else {
+		fn = append(fn, 'u')
+	}
+	switch p.tumbler {
+	case aFace:
+		fn = append(fn, 'a')
+	case bFace:
+		fn = append(fn, 'b')
+	}
+	if p.gear {
+		fn = append(fn, 'g')
+	}
+
+	return string(append(fn, []rune(".stl")...))
 }
 
 type tumblerKind int
