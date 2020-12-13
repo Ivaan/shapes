@@ -60,7 +60,7 @@ func (tb *tumblerBuilder) makeTumbler(p tumblerPart) sdf.SDF3 {
 		}
 
 		tumbler := makeTumblerOutside(tb.setup.Tumbler, faces)
-		if p.tens {
+		if p.tens { //tens column digit is printed upside down
 			tumbler = sdf.Transform3D(
 				tumbler,
 				sdf.RotateX(sdf.Tau/2.0),
@@ -81,7 +81,7 @@ func (tb *tumblerBuilder) makeTumbler(p tumblerPart) sdf.SDF3 {
 		if p.tens != (p.tumbler != none) { //p.tens && !p.tumbler || !p.tens && p.tumbler
 			numberOfTeeth = tb.setup.Gear.DrivenGearNumberOfTeeth
 		}
-		gear, gearTumblerJoiner := makeGear(tb.setup.Tumbler, tb.setup.Gear, numberOfTeeth)
+		gear, gearTumblerJoiner, joinerHeight := makeGear(tb.setup.Tumbler, tb.setup.Gear, numberOfTeeth)
 		if p.tens && (p.tumbler != none) {
 			gear = sdf.Transform3D(
 				gear,
@@ -91,16 +91,18 @@ func (tb *tumblerBuilder) makeTumbler(p tumblerPart) sdf.SDF3 {
 		if p.tumbler != none {
 			gear = sdf.Transform3D(
 				gear,
-				sdf.Translate3d(sdf.V3{0, 0, -tb.setup.Gear.Thickness/2 - tb.setup.Gear.SpaceToTumbler}),
+				sdf.Translate3d(sdf.V3{0, 0, -tb.setup.Gear.Thickness/2 - joinerHeight}),
 			)
 			gearTumblerJoiner = sdf.Transform3D(
 				gearTumblerJoiner,
-				sdf.Translate3d(sdf.V3{0, 0, -tb.setup.Gear.SpaceToTumbler / 2}),
+				sdf.Translate3d(sdf.V3{0, 0, -joinerHeight / 2}),
 			)
 			positives = append(positives, gear)
 			bearingHoleHeight += tb.setup.Gear.Thickness
-			positives = append(positives, gearTumblerJoiner)
-			bearingHoleHeight += tb.setup.Gear.SpaceToTumbler
+			if joinerHeight > 0 {
+				positives = append(positives, gearTumblerJoiner)
+				bearingHoleHeight += joinerHeight
+			}
 		} else {
 			gear = sdf.Transform3D(
 				gear,
@@ -195,7 +197,7 @@ func makeTumblerOutside(tumbler Tumbler, faces [9]int) sdf.SDF3 {
 	return tumblerOutside
 }
 
-func makeGear(tumbler Tumbler, gear Gear, numberOfTeeth int) (gear3D, joiner sdf.SDF3) {
+func makeGear(tumbler Tumbler, gear Gear, numberOfTeeth int) (gear3D, joiner sdf.SDF3, joinerHeight float64) {
 	gearModule := tumbler.Radius * 2.0 / float64(gear.CouplerGearNumberOfTeeth) //comput module for coupling gear, all other gears are different sizes by number of teeth
 	pa := sdf.DtoR(20.0)
 
@@ -213,9 +215,19 @@ func makeGear(tumbler Tumbler, gear Gear, numberOfTeeth int) (gear3D, joiner sdf
 		7,              // facets
 	)
 	gear3D = sdf.TwistExtrude3D(gear2d, gear.Thickness, sdf.Tau/float64(numberOfTeeth))
-	joiner = sdf.Cone3D(gear.SpaceToTumbler, rootRadius, rootRadius+gear.SpaceToTumbler, 0)
+	if gearModule+rootRadius < tumbler.Radius {
+		joinerHeight = gearModule
+	} else {
+		joinerHeight = tumbler.Radius - rootRadius
+	}
+	if joinerHeight > 0 {
+		joiner = sdf.Cone3D(joinerHeight, rootRadius, rootRadius+joinerHeight, 0)
+	} else {
+		joinerHeight = 0
+		joiner = nil
+	}
 
-	return gear3D, joiner
+	return gear3D, joiner, joinerHeight
 }
 
 //bearing holder hole is a cylinder with a constriction in the middle

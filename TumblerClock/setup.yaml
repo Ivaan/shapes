@@ -20,10 +20,9 @@ transmission:
     trackTollerance: 1.5
 gear:
     thickness: 10
-    spaceToTumbler: 5
     backlash: 0.1
     clearance: 0.1
     drivenGearNumberOfTeeth: 25
-    couplerGearNumberOfTeeth: 50
-    colonGearNumberOfTeeth: 60
+    couplerGearNumberOfTeeth: 51
+    colonGearNumberOfTeeth: 61
     motorGearNumberOfTeeth: 15

@@ -78,7 +78,6 @@ type Transmission struct {
 //Gear describes the details of the gears in the clock
 type Gear struct {
 	Thickness                float64 `yaml:"thickness"`
-	SpaceToTumbler           float64 `yaml:"spaceToTumbler"`
 	backlash                 float64 `yaml:"backlash"`
 	clearance                float64 `yaml:"clearance"`
 	DrivenGearNumberOfTeeth  int     `yaml:"drivenGearNumberOfTeeth"`
