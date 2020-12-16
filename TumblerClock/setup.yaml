@@ -19,10 +19,14 @@ transmission:
     length: 8.5
     trackTollerance: 1.5
 gear:
-    thickness: 10
+    thickness: 15
     backlash: 0.1
     clearance: 0.1
     drivenGearNumberOfTeeth: 25
     couplerGearNumberOfTeeth: 51
     colonGearNumberOfTeeth: 61
     motorGearNumberOfTeeth: 15
+frame:
+    thickness: 7
+    widthAsFractionOfShorRadius: 1
+    shaftHolderLength: 21

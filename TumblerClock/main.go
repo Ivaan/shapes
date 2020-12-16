@@ -35,7 +35,8 @@ func main() {
 	fmt.Printf("%+v\n", partsList)
 
 	if partsList.topFrame {
-		//todo: genrate top frame model and render to file
+		//sdf.RenderSTL(makeTopFrame(setup), 200, "TopFrame.stl")
+		sdf.RenderSTLSlow(makeTopFrame(setup), 400, "High-TopFrame.stl")
 	}
 	if partsList.bottomFrame {
 		//todo: genrate bottom frame model and render to file
@@ -48,7 +49,8 @@ func main() {
 
 	for _, p := range partsList.tumblers {
 		t := tb.makeTumbler(p)
-		sdf.RenderSTL(t, 200, p.fileName())
+		//sdf.RenderSTL(t, 200, p.fileName())
+		sdf.RenderSTLSlow(t, 400, "High-"+p.fileName())
 	}
 
 }

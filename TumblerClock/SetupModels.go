@@ -15,6 +15,7 @@ type ClockSetup struct {
 	Spacer
 	Transmission
 	Gear
+	Frame
 }
 
 func (c *ClockSetup) computeSynthetics() ClockSetup {
@@ -30,14 +31,14 @@ type Tumbler struct {
 	Spacing        float64 `yaml:"spacing"`
 	Radius         float64
 	CornerRound    float64
-	//tumblerShortRadius float64
+	ShortRadius    float64
 }
 
 func (t *Tumbler) computeSynthetics() Tumbler {
 	t.FaceEdgeHeight = t.FaceEdgeWidth / 3
 	t.Radius = t.FaceEdgeWidth / 2 / math.Cos(sdf.Tau/12)
 	t.CornerRound = t.Radius * 0.05
-	//t.ShortRadius = math.Sqrt(t.Radius*t.Radius - (t.FaceEdgeWidth/2)*(t.FaceEdgeWidth/2))
+	t.ShortRadius = math.Sqrt(t.Radius*t.Radius - (t.FaceEdgeWidth/2)*(t.FaceEdgeWidth/2))
 	return *t
 }
 
@@ -84,4 +85,11 @@ type Gear struct {
 	CouplerGearNumberOfTeeth int     `yaml:"couplerGearNumberOfTeeth"`
 	ColonGearNumberOfTeeth   int     `yaml:"colonGearNumberOfTeeth"`
 	MotorGearNumberOfTeeth   int     `yaml:"motorGearNumberOfTeeth"`
+}
+
+//Frame desscribes the details of the frame that holds the clock together
+type Frame struct {
+	Thickness                   float64 `yaml:"thickness"`
+	WidthAsFractionOfShorRadius float64 `yaml:"widthAsFractionOfShorRadius"`
+	ShaftHolderLength           float64 `yaml:"shaftHolderLength"`
 }
