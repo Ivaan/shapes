@@ -15,20 +15,21 @@ func main() {
 	// lidLipThickness := 4.0
 	// lidLipInset := 0.0
 	// lidLipWidth := 1.0
-	// jawWidth := 20.0
-	// barwidth := 12.0
-	// jawThickness := 5.0
+	jawWidth := 20.0
+	barWidth := 12.0
+	jawThickness := 5.0
 
-	threadRadius := 4.0
+	threadRadius := 5.0
 	threadPitch := 3.0
-	threadTolerance := 0.3
+	threadTolerance := 0.25
+	//tightThreadTolerance := 1.5
 
 	nutThickness := 4.0
 	nutHeight := 10.0
 
 	boltHeight := 30.0
 
-	head := sdf.KnurledHead3D(threadRadius+nutThickness, nutHeight, nutHeight/10)
+	head := sdf.KnurledHead3D(threadRadius+nutThickness, nutHeight, nutHeight/4)
 
 	tpi45 := threadProfile(threadRadius+threadTolerance, threadPitch, 45, "internal")
 	screwHole := sdf.Screw3D(
@@ -46,17 +47,35 @@ func main() {
 			threadPitch, // thread to thread distance
 			1,           // number of thread starts (< 0 for left hand threads)
 		),
-		sdf.Translate3d(sdf.V3{X: 0, Y: 0, Z: boltHeight/2 - nutHeight/2}),
+		sdf.Translate3d(sdf.V3{X: 0, Y: 0, Z: boltHeight/2 - jawThickness/2}),
 	)
 
-	nut := sdf.Difference3D(head, screwHole)
-	bolt := sdf.Union3D(head, screwBolt)
+	//cubeHead := sdf.Box3D(sdf.V3{10, 10, 10}, 2)
 
-	// tp30 := threadProfile(threadRadius, 3, 30, "internal")
-	// sdf.RenderSVG(tp30, 200, "tp30.svg", "fill:none;stroke:black;stroke-width:0.1")
-	// tp40 := threadProfile(threadRadius, 3, 40, "internal")
-	// sdf.RenderSVG(tp40, 200, "tp40.svg", "fill:none;stroke:black;stroke-width:0.1")
-	// sdf.RenderSVG(tp45, 200, "tp45.svg", "fill:none;stroke:black;stroke-width:0.1")
-	sdf.RenderSTLSlow(nut, 400, "nut.stl")
-	sdf.RenderSTLSlow(bolt, 400, "bolt.stl")
+	nut := sdf.Difference3D(head, screwHole)
+
+	mainJawPlan2D := sdf.Union2D(
+		sdf.Transform2D(
+			sdf.Box2D(sdf.V2{barWidth, jawWidth}, barWidth/3),
+			sdf.Translate2d(sdf.V2{-threadRadius - barWidth/2, 0}),
+		),
+		sdf.Box2D(sdf.V2{2*barWidth + threadRadius, barWidth}, barWidth/3),
+	)
+
+	mainJaw := sdf.Union3D(
+		sdf.ExtrudeRounded3D(
+			mainJawPlan2D,
+			jawThickness,
+			jawThickness/3,
+		),
+		sdf.Transform3D(
+			sdf.Box3D(sdf.V3{threadRadius * 2, threadRadius * 2, jawThickness}, 0),
+			sdf.Translate3d(sdf.V3{0, 0, jawThickness}),
+		),
+		screwBolt,
+	)
+
+	_ = nut
+	//sdf.RenderSTL(nut, 400, "nut.stl")
+	sdf.RenderSTL(mainJaw, 400, "mainJaw.stl")
 }
