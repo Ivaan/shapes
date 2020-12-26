@@ -19,7 +19,9 @@ func main() {
 	barWidth := 12.0
 	jawThickness := 5.0
 
-	threadRadius := 5.0
+	threadHoleRadius := 2.5 //thread as in sewing thread (gosh, this is a poor choice of naming that I just _know_ is going to stop being clever)
+
+	threadRadius := 5.0 //thead, as in bold thread
 	threadPitch := 3.0
 	threadTolerance := 0.25
 	//tightThreadTolerance := 1.5
@@ -62,18 +64,25 @@ func main() {
 		sdf.Box2D(sdf.V2{2*barWidth + threadRadius, barWidth}, barWidth/3),
 	)
 
-	mainJaw := sdf.Union3D(
-		sdf.ExtrudeRounded3D(
-			mainJawPlan2D,
-			jawThickness,
-			jawThickness/3,
+	mainJaw := sdf.Difference3D(
+		sdf.Union3D(
+			sdf.ExtrudeRounded3D(
+				mainJawPlan2D,
+				jawThickness,
+				jawThickness/3,
+			),
+			sdf.Transform3D(
+				sdf.Box3D(sdf.V3{threadRadius * 2, threadRadius * 2, jawThickness}, 0),
+				sdf.Translate3d(sdf.V3{0, 0, jawThickness}),
+			),
+			screwBolt,
 		),
 		sdf.Transform3D(
-			sdf.Box3D(sdf.V3{threadRadius * 2, threadRadius * 2, jawThickness}, 0),
-			sdf.Translate3d(sdf.V3{0, 0, jawThickness}),
+			sdf.Cylinder3D(jawThickness, threadHoleRadius, 0),
+			sdf.Translate3d(sdf.V3{threadRadius + barWidth/3, 0, 0}),
 		),
-		screwBolt,
 	)
+	mainJaw.(*sdf.DifferenceSDF3).SetMax(sdf.PolyMax(0.5))
 
 	_ = nut
 	//sdf.RenderSTL(nut, 400, "nut.stl")
