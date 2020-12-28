@@ -11,12 +11,11 @@ func main() {
 	//floating jaw has a similar jaw to main, a square hole to connet to main jaw to keep from twisting, a friction surface to mate with nut
 	//nut has inner threads, a friction surface to mate with floating jaw, and a knerled outside
 
-	// lidThickness := 2.0
-	// lidLipThickness := 4.0
-	// lidLipInset := 0.0
-	// lidLipWidth := 1.0
-	jawWidth := 20.0
-	barWidth := 12.0
+	lidThickness := 2.0
+	lidLipThickness := 4.0
+	lidLipWidth := 1.0
+	jawWidth := 25.0
+	barWidth := 17.0
 	jawThickness := 5.0
 
 	threadHoleRadius := 2.5 //thread as in sewing thread (gosh, this is a poor choice of naming that I just _know_ is going to stop being clever)
@@ -30,6 +29,9 @@ func main() {
 	nutHeight := 10.0
 
 	boltHeight := 30.0
+
+	barLength := 2*barWidth + threadRadius
+	extrudeRound := jawThickness / 3
 
 	head := sdf.KnurledHead3D(threadRadius+nutThickness, nutHeight, nutHeight/4)
 
@@ -57,34 +59,64 @@ func main() {
 	nut := sdf.Difference3D(head, screwHole)
 
 	mainJawPlan2D := sdf.Union2D(
-		sdf.Transform2D(
-			sdf.Box2D(sdf.V2{barWidth, jawWidth}, barWidth/3),
+		sdf.Transform2D( // clamp part
+			sdf.Box2D(sdf.V2{barWidth - extrudeRound, jawWidth - extrudeRound}, barWidth/3),
 			sdf.Translate2d(sdf.V2{-threadRadius - barWidth/2, 0}),
 		),
-		sdf.Box2D(sdf.V2{2*barWidth + threadRadius, barWidth}, barWidth/3),
+		sdf.Box2D(sdf.V2{barLength - extrudeRound, barWidth - extrudeRound}, barWidth/3), //horizontle part
 	)
 
 	mainJaw := sdf.Difference3D(
 		sdf.Union3D(
-			sdf.ExtrudeRounded3D(
+			sdf.ExtrudeRounded3D( //Main Jaw T shape
 				mainJawPlan2D,
 				jawThickness,
-				jawThickness/3,
+				extrudeRound,
 			),
-			sdf.Transform3D(
-				sdf.Box3D(sdf.V3{threadRadius * 2, threadRadius * 2, jawThickness}, 0),
-				sdf.Translate3d(sdf.V3{0, 0, jawThickness}),
+			sdf.Transform3D( // anti rotation cube
+				sdf.Box3D(sdf.V3{threadRadius * 2, threadRadius * 2, jawThickness * 1.5}, 0),
+				sdf.Translate3d(sdf.V3{0, 0, jawThickness * 0.75}),
 			),
-			screwBolt,
+			screwBolt, //screwBolt
 		),
-		sdf.Transform3D(
-			sdf.Cylinder3D(jawThickness, threadHoleRadius, 0),
-			sdf.Translate3d(sdf.V3{threadRadius + barWidth/3, 0, 0}),
+		sdf.Union3D(
+			sdf.Transform3D( //thread hole
+				sdf.Cylinder3D(jawThickness, threadHoleRadius, 0),
+				sdf.Translate3d(sdf.V3{barLength/2 - barWidth/3, 0, 0}),
+			),
 		),
 	)
-	mainJaw.(*sdf.DifferenceSDF3).SetMax(sdf.PolyMax(0.5))
+	mainJaw.(*sdf.DifferenceSDF3).SetMax(sdf.PolyMax(0.5)) // soften thread hole edges
+	mainJaw = sdf.Difference3D(
+		mainJaw,
+		sdf.Transform3D( //lid lip slot
+			sdf.Box3D(sdf.V3{lidLipWidth, jawWidth, lidLipThickness - lidThickness}, 0),
+			sdf.Translate3d(sdf.V3{-threadRadius - lidLipWidth/2, 0, jawThickness/2 - (lidLipThickness-lidThickness)/2}),
+		),
+	)
+
+	floatingJawPlan2D := sdf.Union2D(
+		sdf.Transform2D( // clamp part
+			sdf.Box2D(sdf.V2{barWidth - extrudeRound, jawWidth - extrudeRound}, barWidth/3),
+			sdf.Translate2d(sdf.V2{-threadRadius - barWidth/2, 0}),
+		),
+		sdf.Box2D(sdf.V2{barWidth - extrudeRound, barWidth - extrudeRound}, barWidth/3), //horizontle part
+	)
+	floatingJaw := sdf.Difference3D(
+		sdf.Union3D(
+			sdf.ExtrudeRounded3D( //Floating Jaw T shape
+				floatingJawPlan2D,
+				jawThickness,
+				extrudeRound,
+			),
+		),
+		sdf.Box3D(sdf.V3{threadRadius * 2, threadRadius * 2, jawThickness}, 0),
+	)
+	floatingJaw.(*sdf.DifferenceSDF3).SetMax(sdf.PolyMax(0.5)) // soften anti rotation cube hole edges
 
 	_ = nut
-	//sdf.RenderSTL(nut, 400, "nut.stl")
-	sdf.RenderSTL(mainJaw, 400, "mainJaw.stl")
+	_ = mainJaw
+	//sdf.RenderSTL(nut, 200, "nut.stl")
+	sdf.RenderSTL(mainJaw, 200, "mainJaw.stl")
+	sdf.RenderSTL(floatingJaw, 200, "floatJaw.stl")
 }
