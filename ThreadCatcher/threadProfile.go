@@ -25,14 +25,14 @@ func threadProfile(
 	if mode == "external" {
 		rRoot := (pitch / 8.0) / math.Cos(theta)
 		xOfs := (1.0 / 16.0) * pitch
-		iso.Add(pitch, 0)
+		iso.Add(pitch, -rMajor)
 		iso.Add(pitch, r0+h)
 		iso.Add(pitch/2.0, r0).Smooth(rRoot, 5)
 		iso.Add(xOfs, rMajor)
 		iso.Add(-xOfs, rMajor)
 		iso.Add(-pitch/2.0, r0).Smooth(rRoot, 5)
 		iso.Add(-pitch, r0+h)
-		iso.Add(-pitch, 0)
+		iso.Add(-pitch, -rMajor)
 	} else if mode == "internal" {
 		rMinor := r0 + (1.0/4.0)*h
 		rCrest := (pitch / 16.0) / math.Cos(theta)

@@ -17,18 +17,19 @@ func main() {
 	jawWidth := 25.0
 	barWidth := 20.0
 	jawThickness := 5.0
-
+	antiRotationCubeTollerance := 0.35
 	threadHoleRadius := 2.5 //thread as in sewing thread (gosh, this is a poor choice of naming that I just _know_ is going to stop being clever)
 
 	threadRadius := 4.0 //thead, as in bold thread
 	threadPitch := 3.0
-	threadTolerance := 0.25
-	//tightThreadTolerance := 1.5
+	threadTolerance := 0.20
+	threadExpand := 0.20
+	//tightThreadTolerance := 0.15
 
 	nutThickness := 3.0
 	nutHeight := 10.0
 	captureAngleSize := 1.5
-	captureAngleTolerance := 0.25
+	captureAngleTolerance := 0.35
 	captureRingShrink := 0.2 //To keep capture ring from touching knurl points
 
 	boltHeight := 30.0
@@ -54,11 +55,13 @@ func main() {
 
 	tpe45 := threadProfile(threadRadius-threadTolerance, threadPitch, 45, "external")
 	screwBolt := sdf.Transform3D(
-		sdf.Screw3D(
+		Screw3DWithTaper(
 			tpe45,       // 2D thread profile
 			boltHeight,  // length of screw
 			threadPitch, // thread to thread distance
 			1,           // number of thread starts (< 0 for left hand threads)
+			nutHeight,
+			-threadExpand,
 		),
 		sdf.Translate3d(sdf.V3{X: 0, Y: 0, Z: boltHeight/2 - jawThickness/2}),
 	)
@@ -128,7 +131,7 @@ func main() {
 				jawThickness,
 				extrudeRound,
 			),
-			sdf.Transform3D(
+			sdf.Transform3D( // capture ring
 				sdf.RevolveTheta3D(
 					captureRingCrossSection,
 					sdf.Tau/2,
@@ -138,7 +141,7 @@ func main() {
 				),
 			),
 		),
-		sdf.Box3D(sdf.V3{threadRadius * 2, threadRadius * 2, jawThickness}, 0),
+		sdf.Box3D(sdf.V3{threadRadius*2 + antiRotationCubeTollerance, threadRadius*2 + antiRotationCubeTollerance, jawThickness}, 0),
 	)
 	floatingJaw.(*sdf.DifferenceSDF3).SetMax(sdf.PolyMax(0.5)) // soften anti rotation cube hole edges
 
@@ -148,18 +151,22 @@ func main() {
 	//sdf.RenderSTL(mainJaw, 200, "mainJaw.stl")
 	//sdf.RenderSTL(floatingJaw, 200, "floatJaw.stl")
 
-	assembled := sdf.Union3D(
-		mainJaw,
-		sdf.Transform3D(
-			floatingJaw,
-			sdf.Translate3d(sdf.V3{0, 0, jawThickness}),
-		),
-		sdf.Transform3D(
-			nut,
-			sdf.Translate3d(sdf.V3{0, 0, 1.5*jawThickness + (nutHeight)/2}).Mul(
-				sdf.RotateX(sdf.Tau/2),
-			),
-		),
-	)
-	sdf.RenderSTLSlow(assembled, 800, "threadCatcher.stl")
+	sdf.RenderSTLSlow(nut, 400, "nut.stl")
+	sdf.RenderSTLSlow(mainJaw, 400, "mainJaw.stl")
+	sdf.RenderSTLSlow(floatingJaw, 400, "floatJaw.stl")
+
+	// assembled := sdf.Union3D(
+	// 	mainJaw,
+	// 	sdf.Transform3D(
+	// 		floatingJaw,
+	// 		sdf.Translate3d(sdf.V3{0, 0, jawThickness}),
+	// 	),
+	// 	sdf.Transform3D(
+	// 		nut,
+	// 		sdf.Translate3d(sdf.V3{0, 0, 1.5*jawThickness + (nutHeight)/2}).Mul(
+	// 			sdf.RotateX(sdf.Tau/2),
+	// 		),
+	// 	),
+	// )
+	// sdf.RenderSTL(assembled, 200, "threadCatcher.stl")
 }
