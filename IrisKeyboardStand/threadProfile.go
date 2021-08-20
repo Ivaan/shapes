@@ -14,7 +14,7 @@ func threadProfile(
 	pitch float64, // thread to thread distance
 	angle float64,
 	mode string, // internal/external thread
-) sdf.SDF2 {
+) (sdf.SDF2, error) {
 
 	theta := sdf.DtoR(angle)
 	h := pitch / (2.0 * math.Tan(theta))

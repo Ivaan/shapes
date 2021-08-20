@@ -3,6 +3,8 @@ package main
 import (
 	"math"
 
+	"github.com/deadsy/sdfx/obj"
+	"github.com/deadsy/sdfx/render"
 	"github.com/deadsy/sdfx/sdf"
 )
 
@@ -27,33 +29,52 @@ func main() {
 	shortBoltHeight := 30.0
 	//bunch of circles at Iris screw locations
 
+	screwpadCircle, err := sdf.Circle2D(irisScrewCircleRadius)
+	if err != nil {
+		panic(err)
+	}
+	screwHoleSphere, err := sdf.Sphere3D(irisScrewHoleRadius)
+	if err != nil {
+		panic(err)
+	}
 	topLayerCircles := make([]sdf.SDF2, len(irisScrewLocations))
 	topLayerScrewHoles := make([]sdf.SDF3, len(irisScrewLocations))
 	for i, v := range irisScrewLocations {
 		topLayerCircles[i] = sdf.Transform2D(
-			sdf.Circle2D(irisScrewCircleRadius),
+			screwpadCircle,
 			sdf.Translate2d(v),
 		)
 		topLayerScrewHoles[i] = sdf.Transform3D(
-			sdf.Sphere3D(irisScrewHoleRadius),
+			screwHoleSphere,
 			sdf.Translate3d(sdf.V3{X: v.X, Y: v.Y, Z: 0}),
 		)
 	}
 
-	tpi45 := threadProfile(threadRadius+threadTolerance, threadPitch, 45, "internal")
-	screwHole := sdf.Screw3D(
+	tpi45, err := threadProfile(threadRadius+threadTolerance, threadPitch, 45, "internal")
+	if err != nil {
+		panic(err)
+	}
+	screwHole, err := sdf.Screw3D(
 		tpi45,        // 2D thread profile
 		nutThickness, // length of screw
 		threadPitch,  // thread to thread distance
 		1,            // number of thread starts (< 0 for left hand threads)
 	)
+	if err != nil {
+		panic(err)
+	}
+
+	nutCircle, err := sdf.Circle2D(nutCircleRadius)
+	if err != nil {
+		panic(err)
+	}
 	backwardScrewHole := sdf.Transform3D(screwHole, sdf.MirrorYZ())
 	bottomLayerCircles := make([]sdf.SDF2, len(nutLocations))
 	bottomLayerScrewHoles := make([]sdf.SDF3, len(nutLocations))
 	backwardBottomLayerScrewHoles := make([]sdf.SDF3, len(nutLocations))
 	for i, v := range nutLocations {
 		bottomLayerCircles[i] = sdf.Transform2D(
-			sdf.Circle2D(nutCircleRadius),
+			nutCircle,
 			sdf.Translate2d(v),
 		)
 		bottomLayerScrewHoles[i] = sdf.Transform3D(
@@ -147,22 +168,34 @@ func main() {
 		sdf.MirrorYZ().Mul(sdf.RotateY(-tiltAngle/2.0)),
 	)
 
-	tpe45 := threadProfile(threadRadius-threadTolerance, threadPitch, 45, "external")
-	tallScrewBolt := sdf.Screw3D(
+	tpe45, err := threadProfile(threadRadius-threadTolerance, threadPitch, 45, "external")
+	if err != nil {
+		panic(err)
+	}
+	tallScrewBolt, err := sdf.Screw3D(
 		tpe45,          // 2D thread profile
 		tallBoltHeight, // length of screw
 		threadPitch,    // thread to thread distance
 		1,              // number of thread starts (< 0 for left hand threads)
 	)
+	if err != nil {
+		panic(err)
+	}
 
-	shortScrewBolt := sdf.Screw3D(
+	shortScrewBolt, err := sdf.Screw3D(
 		tpe45,           // 2D thread profile
 		shortBoltHeight, // length of screw
 		threadPitch,     // thread to thread distance
 		1,               // number of thread starts (< 0 for left hand threads)
 	)
+	if err != nil {
+		panic(err)
+	}
 
-	head := sdf.KnurledHead3D(nutCircleRadius, nutThickness, nutThickness/4)
+	head, err := obj.KnurledHead3D(nutCircleRadius, nutThickness, nutThickness/4)
+	if err != nil {
+		panic(err)
+	}
 
 	nut := sdf.Difference3D(
 		head,
@@ -172,11 +205,12 @@ func main() {
 	_ = rightStand
 	_ = tallScrewBolt
 	_ = shortScrewBolt
-	sdf.RenderSTLSlow(leftStand, 800, "leftStandLowRes.stl")
-	sdf.RenderSTLSlow(rightStand, 200, "rightStandLowRes.stl")
-	sdf.RenderSTLSlow(tallScrewBolt, 800, "tallScrewBolt.stl")
-	sdf.RenderSTLSlow(shortScrewBolt, 800, "shortScrewBolt.stl")
-	sdf.RenderSTLSlow(nut, 800, "jamNut.stl")
+
+	render.RenderSTLSlow(leftStand, 800, "leftStandLowResNew.stl")
+	render.RenderSTLSlow(rightStand, 800, "rightStandLowResNew.stl")
+	render.RenderSTLSlow(tallScrewBolt, 800, "tallScrewBoltNew.stl")
+	render.RenderSTLSlow(shortScrewBolt, 800, "shortScrewBoltNew.stl")
+	render.RenderSTLSlow(nut, 800, "jamNut.stl")
 	//sdf.RenderSTLSlow(stand, 400, "stand.stl")
 	//bunch of circles at magnet locations
 	//bunch of other circles at locations to make the rest work?

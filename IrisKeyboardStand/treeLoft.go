@@ -22,7 +22,7 @@ func treeLoft3D(sdfs []sdf.SDF2, center sdf.V2, height, twist, round float64) sd
 		center: center,
 		height: (height / 2) - round,
 		round:  round,
-		min:    sdf.Min,
+		min:    math.Min,
 		twist:  sdf.TwistExtrude(height, twist),
 	}
 	if t.height < 0 {
@@ -55,7 +55,7 @@ func (t *treeLoftSDF3) Evaluate(p sdf.V3) float64 {
 
 	//this code borrowed from sdf.Loft
 	//it does the right thing for the various z ranges
-	b := sdf.Abs(p.Z) - t.height
+	b := math.Abs(p.Z) - t.height
 	var d float64
 	if b > 0 {
 		// outside the object Z extent
@@ -70,7 +70,7 @@ func (t *treeLoftSDF3) Evaluate(p sdf.V3) float64 {
 		// within the object Z extent
 		if a < 0 {
 			// inside the boundary
-			d = sdf.Max(a, b)
+			d = math.Max(a, b)
 		} else {
 			// outside the boundary
 			d = a
