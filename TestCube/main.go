@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/deadsy/sdfx/render"
 	"github.com/deadsy/sdfx/sdf"
 )
 
@@ -41,9 +42,27 @@ func main() {
 		fmt.Printf("can't generate Z sdf2 %s\n", err)
 		os.Exit(1)
 	}
-	x3d := sdf.Transform3D(sdf.Loft3D(sdf.Offset2D(x2d, -4), x2d, 4.0, 0), sdf.Translate3d(sdf.V3{0, 0, -2}))
-	y3d := sdf.Transform3D(sdf.Loft3D(sdf.Offset2D(y2d, -4), y2d, 4.0, 0), sdf.Translate3d(sdf.V3{0, 0, -2}))
-	z3d := sdf.Transform3D(sdf.Loft3D(sdf.Offset2D(z2d, -4), z2d, 4.0, 0), sdf.Translate3d(sdf.V3{0, 0, -2}))
+
+	x3d, err := sdf.Loft3D(sdf.Offset2D(x2d, -4), x2d, 4.0, 0)
+	if err != nil {
+		fmt.Printf("can't generate X sdf3 %s\n", err)
+		os.Exit(1)
+	}
+	x3d = sdf.Transform3D(x3d, sdf.Translate3d(sdf.V3{0, 0, -2}))
+
+	y3d, err := sdf.Loft3D(sdf.Offset2D(y2d, -4), y2d, 4.0, 0)
+	if err != nil {
+		fmt.Printf("can't generate Y sdf3 %s\n", err)
+		os.Exit(1)
+	}
+	y3d = sdf.Transform3D(y3d, sdf.Translate3d(sdf.V3{0, 0, -2}))
+
+	z3d, err := sdf.Loft3D(sdf.Offset2D(z2d, -4), z2d, 4.0, 0)
+	if err != nil {
+		fmt.Printf("can't generate Z sdf3 %s\n", err)
+		os.Exit(1)
+	}
+	z3d = sdf.Transform3D(z3d, sdf.Translate3d(sdf.V3{0, 0, -2}))
 
 	// x3d := sdf.ExtrudeRounded3D(x2d, 1.0, 0.2)
 	// y3d := sdf.ExtrudeRounded3D(y2d, 1.0, 0.2)
@@ -86,11 +105,16 @@ func main() {
 			sdf.Translate3d(sdf.V3{0, 0, 10}),
 		),
 	)
-	box := sdf.Difference3D(
-		sdf.Box3D(sdf.V3{20.0, 20.0, 20.0}, 2),
+	box, err := sdf.Box3D(sdf.V3{20.0, 20.0, 20.0}, 2)
+	if err != nil {
+		fmt.Printf("can't generate Box sdf3 %s\n", err)
+		os.Exit(1)
+	}
+	box = sdf.Difference3D(
+		box,
 		sdf.Union3D(xLeft, xRight, yFront, yBack, zTop, zBottom),
 	)
 	//box := sdf.Union3D(sdf.Box3D(sdf.V3{20.0, 20.0, 20.0}, 2), xLeft, xRight, yFront, yBack, zTop, zBottom)
 
-	sdf.RenderSTLSlow(box, 300, "textCube.stl")
+	render.RenderSTLSlow(box, 300, "textCube.stl")
 }
