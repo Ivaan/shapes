@@ -21,6 +21,8 @@ func main() {
 	bendOffset := thickThickness*(boardWidth/(thickThickness-thinThickness)) - boardWidth
 	tiltAngle := math.Atan2(thickThickness-thinThickness, boardWidth)
 	irisScrewLocations := [...]sdf.V2{{X: 3.9067, Y: 3.8671}, {X: 69.6776, Y: -14.9993}, {X: 125.7031, Y: -29.7570}, {X: 149.2438, Y: 11.1359}, {X: 135.4798, Y: 20.5876}, {X: 123.2997, Y: 38.1379}, {X: 122.8589, Y: 86.1195}, {X: 102.3013, Y: 94.3053}, {X: 52.4209, Y: 94.9352}, {X: 3.7082, Y: 84.1462}}
+	//Some experimentation with a not an Iris keyboard
+	//irisScrewLocations := [...]sdf.V2{{X: 163.7082, Y: -40.2331}, {X: 190.2947, Y: 16.7791}, {X: 80.4060, Y: -3.4064}, {X: 128.5439, Y: 103.9666}, {X: 148.5527, Y: 124.3147}, {X: 95.0694, Y: 126.1336}, {X: 18.5439, Y: 103.9648}, {X: 0.0000, Y: 124.3148}, {X: 0.0000, Y: 0.0000}, {X: 0.0000, Y: -40.2331}}
 	nutLocations := [...]sdf.V2{{X: 28, Y: 10}, {X: 25, Y: 74}, {X: 112, Y: 77}, {X: 116, Y: 0}}
 	threadRadius := 4.0 //thead, as in bolt thread
 	threadPitch := 3.0
@@ -201,35 +203,17 @@ func main() {
 		head,
 		screwHole,
 	)
-	_ = leftStand
+
 	_ = rightStand
 	_ = tallScrewBolt
 	_ = shortScrewBolt
+	_ = nut
 
-	render.RenderSTLSlow(leftStand, 800, "leftStandLowResNew.stl")
-	render.RenderSTLSlow(rightStand, 800, "rightStandLowResNew.stl")
-	render.RenderSTLSlow(tallScrewBolt, 800, "tallScrewBoltNew.stl")
-	render.RenderSTLSlow(shortScrewBolt, 800, "shortScrewBoltNew.stl")
-	render.RenderSTLSlow(nut, 800, "jamNut.stl")
-	//sdf.RenderSTLSlow(stand, 400, "stand.stl")
-	//bunch of circles at magnet locations
-	//bunch of other circles at locations to make the rest work?
-
-	//topplate use a 2D union function that will blend circles
-
-	//4 circles at adjustment screw locations
-
-	//bottom plate is 2D union blend of these circles
-
-	//connect top and bottom plate through custom extrude function
-	//that's a combination of Loft3D and RevolveTheta3D
-	//and _maybe_ an animation of 2D union blend function
+	//render.RenderSTLSlow(leftStand, 800, "ergodoneleftStand.stl")
+	render.RenderSTLSlow(leftStand, 200, "ergodoneleftStandLow.stl")
+	//render.RenderSTLSlow(rightStand, 200, "ergodonerightStandLow.stl")
+	//render.RenderSTLSlow(tallScrewBolt, 300, "tallScrewBoltSlow.stl")
+	//render.RenderSTLSlow(shortScrewBolt, 200, "shortScrewBoltSlow.stl")
+	//render.RenderSTLSlow(nut, 150, "jamNutSlow.stl")
 
 }
-
-// func lineFromTo(v1, v2 sdf.V2, round float64) sdf.SDF2 {
-// 	return sdf.Transform2D(
-// 		sdf.Line2D()
-
-// 	)
-// }
