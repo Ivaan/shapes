@@ -3,6 +3,7 @@ package main
 import (
 	"math"
 
+	"github.com/deadsy/sdfx/obj"
 	"github.com/deadsy/sdfx/sdf"
 )
 
@@ -145,7 +146,7 @@ func (tb *tumblerBuilder) makeTumbler(p tumblerPart) sdf.SDF3 {
 func makeTumblerOutside(tumbler Tumbler, faces [9]int) sdf.SDF3 {
 	//tumbler, triangle outside, bearing holder hole inside
 	// triangle is an extruded 3 nagon
-	triangle := sdf.Polygon2D(sdf.Nagon(3, tumbler.Radius-tumbler.CornerRound))
+	triangle, _ := sdf.Polygon2D(sdf.Nagon(3, tumbler.Radius-tumbler.CornerRound))
 	triangle = sdf.Offset2D(triangle, tumbler.CornerRound)
 	tumblerOutside := sdf.Extrude3D(triangle, tumbler.FaceEdgeHeight)
 
@@ -205,15 +206,17 @@ func makeGear(tumbler Tumbler, gear Gear, numberOfTeeth int) (gear3D, joiner sdf
 	dedendum := gearModule + gear.clearance
 	rootRadius := pitchRadius - dedendum
 
-	gear2d := sdf.InvoluteGear(
-		numberOfTeeth,  // number_teeth
-		gearModule,     // gear_module
-		pa,             // pressure_angle
-		gear.backlash,  // backlash
-		gear.clearance, // clearance
-		rootRadius,     // ring_width
-		7,              // facets
-	)
+	gp := obj.InvoluteGearParms{
+		NumberTeeth:   numberOfTeeth,
+		Module:        gearModule,
+		PressureAngle: pa,
+		Backlash:      gear.backlash,
+		Clearance:     gear.clearance,
+		Facets:        7,
+	}
+
+	gear2d, _ := obj.InvoluteGear(&gp)
+
 	gear3D = sdf.TwistExtrude3D(gear2d, gear.Thickness, sdf.Tau/float64(numberOfTeeth))
 	if gearModule+rootRadius < tumbler.Radius {
 		joinerHeight = gearModule
@@ -221,7 +224,7 @@ func makeGear(tumbler Tumbler, gear Gear, numberOfTeeth int) (gear3D, joiner sdf
 		joinerHeight = tumbler.Radius - rootRadius
 	}
 	if joinerHeight > 0 {
-		joiner = sdf.Cone3D(joinerHeight, rootRadius, rootRadius+joinerHeight, 0)
+		joiner, _ = sdf.Cone3D(joinerHeight, rootRadius, rootRadius+joinerHeight, 0)
 	} else {
 		joinerHeight = 0
 		joiner = nil
@@ -237,14 +240,14 @@ func makeGear(tumbler Tumbler, gear Gear, numberOfTeeth int) (gear3D, joiner sdf
 //between top and center (and bottom and center) are correctly oriented truncated between bearing and constricted sized cylinders
 func makeBearingHole(bearing Bearing, bearingHolder BearingHolder, height float64) sdf.SDF3 {
 
-	bearingHole := sdf.Cylinder3D(bearing.Thickness, bearing.OD/2+bearingHolder.Tolerance, 0)
-	chamfer3d := sdf.Cone3D(
+	bearingHole, _ := sdf.Cylinder3D(bearing.Thickness, bearing.OD/2+bearingHolder.Tolerance, 0)
+	chamfer3d, _ := sdf.Cone3D(
 		bearingHolder.StopConstriction,
 		bearing.OD/2+bearingHolder.Tolerance-bearingHolder.StopConstriction,
 		bearing.OD/2+bearingHolder.Tolerance,
 		0,
 	)
-	constricted := sdf.Cylinder3D(height-2*bearing.Thickness, bearing.OD/2+bearingHolder.Tolerance-bearingHolder.StopConstriction, 0)
+	constricted, _ := sdf.Cylinder3D(height-2*bearing.Thickness, bearing.OD/2+bearingHolder.Tolerance-bearingHolder.StopConstriction, 0)
 
 	topBearingHolder := sdf.Transform3D(
 		bearingHole,
@@ -274,27 +277,29 @@ func makePusherTracksAndNibs(transmission Transmission, tumbler Tumbler, innerCl
 
 		pusherArcAngle := transmission.NibLength / distanceFromCenter
 
-		pushers[n] = sdf.Transform3D(
-			sdf.RevolveTheta3D(
-				sdf.Transform2D(
-					pusher2D,
-					sdf.Translate2d(sdf.V2{distanceFromCenter, 0}),
-				),
-				pusherArcAngle,
+		pusher3D, _ := sdf.RevolveTheta3D(
+			sdf.Transform2D(
+				pusher2D,
+				sdf.Translate2d(sdf.V2{distanceFromCenter, 0}),
 			),
+			pusherArcAngle,
+		)
+		pushers[n] = sdf.Transform3D(
+			pusher3D,
 			sdf.RotateZ(startAngle-pusherArcAngle/2).Mul(
 				sdf.Translate3d(sdf.V3{0, 0, tumbler.FaceEdgeHeight}),
 			),
 		)
 
-		tracks[n] = sdf.Transform3D(
-			sdf.RevolveTheta3D(
-				sdf.Transform2D(
-					track2D,
-					sdf.Translate2d(sdf.V2{distanceFromCenter, 0}),
-				),
-				2.0*sdf.Tau/3.0+pusherArcAngle,
+		track3D, _ := sdf.RevolveTheta3D(
+			sdf.Transform2D(
+				track2D,
+				sdf.Translate2d(sdf.V2{distanceFromCenter, 0}),
 			),
+			2.0*sdf.Tau/3.0+pusherArcAngle,
+		)
+		tracks[n] = sdf.Transform3D(
+			track3D,
 			sdf.RotateZ(startAngle-pusherArcAngle/2-2.0*sdf.Tau/3.0),
 		)
 	}
@@ -302,7 +307,7 @@ func makePusherTracksAndNibs(transmission Transmission, tumbler Tumbler, innerCl
 }
 
 func pusherNibProfile(width, height float64) sdf.SDF2 {
-	return sdf.Polygon2D([]sdf.V2{
+	nib, _ := sdf.Polygon2D([]sdf.V2{
 		{-width / 2, 0},
 		{-width / 2, height},
 		{0, height + width*0.5},
@@ -310,6 +315,8 @@ func pusherNibProfile(width, height float64) sdf.SDF2 {
 		{width / 2, 0},
 		{-width / 2, 0},
 	})
+
+	return nib
 }
 
 func flipFacesForTens(faces [9]int) [9]int {
@@ -323,15 +330,16 @@ func flipFacesForTens(faces [9]int) [9]int {
 }
 
 func makeUnTexturedPlane(length, width, thickness float64) sdf.SDF3 {
+	box, _ := sdf.Box3D(sdf.V3{length, width, thickness}, 0)
 	return sdf.Transform3D(
-		sdf.Box3D(sdf.V3{length, width, thickness}, 0),
+		box,
 		sdf.RotateX(math.Atan(thickness/width)),
 	)
 }
 
 func makeHexTexturePlane(length, width, thickness, hexRadius float64) sdf.SDF3 {
 	minorRadius := math.Cos(sdf.Tau/12) * hexRadius
-	hex := sdf.Polygon2D(sdf.Nagon(6, hexRadius))
+	hex, _ := sdf.Polygon2D(sdf.Nagon(6, hexRadius))
 	cell := sdf.Extrude3D(hex, thickness)
 	cell = sdf.Transform3D(
 		cell,
@@ -356,9 +364,10 @@ func makeHexTexturePlane(length, width, thickness, hexRadius float64) sdf.SDF3 {
 		}
 	}
 
+	box, _ := sdf.Box3D(sdf.V3{length, width, thickness * 2}, 0)
 	return sdf.Intersect3D(
 		sdf.Union3D(cells...),
-		sdf.Box3D(sdf.V3{length, width, thickness * 2}, 0),
+		box,
 	)
 	//return sdf.Union3D(cells...)
 
