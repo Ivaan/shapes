@@ -16,6 +16,7 @@ type ClockSetup struct {
 	Transmission
 	Gear
 	Frame
+	MotorMount
 }
 
 func (c *ClockSetup) computeSynthetics() ClockSetup {
@@ -92,4 +93,14 @@ type Frame struct {
 	Thickness                   float64 `yaml:"thickness"`
 	WidthAsFractionOfShorRadius float64 `yaml:"widthAsFractionOfShorRadius"`
 	ShaftHolderLength           float64 `yaml:"shaftHolderLength"`
+}
+
+type MotorMount struct {
+	MotorAcross           float64 `yaml:"motorAcross"`
+	MotorCornerToCorner   float64 `yaml:"motorCornerToCorner"`
+	MotorShaftAllowance   float64 `yaml:"motorShaftAllowance"`
+	MountThickness        float64 `yaml:"mountThickness"`
+	MountDepth            float64 `yaml:"mountDepth"`
+	ScrewDistanceFromEdge float64 `yaml:"screwDistanceFromEdge"`
+	ScrewHoleDiameter     float64 `yaml:"screwHoleDiameter"`
 }

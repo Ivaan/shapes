@@ -32,6 +32,8 @@ func main() {
 	}
 	setup = setup.computeSynthetics()
 
+	//fmt.Printf("%+v\n", setup) //uncomment to write setup conents
+
 	partsList := parsePartsString(*partsString)
 	fmt.Printf("%+v\n", partsList)
 
@@ -41,6 +43,10 @@ func main() {
 	}
 	if partsList.bottomFrame {
 		//todo: genrate bottom frame model and render to file
+	}
+	if partsList.motorMount {
+		mount := makeMotorMount(setup)
+		render.RenderSTLSlow(mount, 400, "MotorMount.stl")
 	}
 	if partsList.colonGear {
 		//todo: genrate colon gear model and render to file

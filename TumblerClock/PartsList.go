@@ -8,6 +8,7 @@ import (
 type partsList struct {
 	topFrame    bool
 	bottomFrame bool
+	motorMount  bool
 	colonGear   bool
 	tumblers    []tumblerPart
 }
@@ -31,6 +32,8 @@ func parsePartsString(partsString string) partsList {
 			parts.topFrame = true
 		case "bottomFrame":
 			parts.bottomFrame = true
+		case "motorMount":
+			parts.motorMount = true
 		case "colonGear":
 			parts.colonGear = true
 		default:

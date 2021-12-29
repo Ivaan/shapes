@@ -30,3 +30,11 @@ frame:
     thickness: 7
     widthAsFractionOfShorRadius: 1
     shaftHolderLength: 21
+motormount:
+    motorAcross: 42.7
+    motorCornerToCorner: 54.2
+    motorShaftAllowance: 30
+    mountThickness: 5
+    mountDepth: 9.8
+    screwDistanceFromEdge: 5.9
+    screwHoleDiameter: 4.1
