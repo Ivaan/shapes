@@ -7,12 +7,12 @@ import (
 	"github.com/deadsy/sdfx/sdf"
 )
 
-var _tolerance = 1.0e-3
+var _tolerance = 1.0e-10
 
 func main() {
 	//playing with the idea of a 2D shape extruded along a path (Probably just a 2D path for starts, my math isn't so strong)
 	//path := NewPartialCirclePath2D(10.0, -sdf.Tau/7, sdf.Tau/7)
-	path := NewPartialCirclePath2D(10.0, -sdf.Tau/3, sdf.Tau/12)
+	path := NewPartialCirclePath2D(10.0, 0*sdf.Tau/24, 15.0, 6*sdf.Tau/24)
 	shape, _ := sdf.Circle2D(3.0)
 	othershape, _ := sdf.Circle2D(1.0)
 	squareshape := sdf.Box2D(sdf.V2{X: 1.0, Y: 1.5}, 0.2)
@@ -22,15 +22,19 @@ func main() {
 		sdf.Transform2D(squareshape, sdf.Translate2d(sdf.V2{X: 3, Y: -2.3})),
 		sdf.Transform2D(squareshape, sdf.Translate2d(sdf.V2{X: -3, Y: -2.3})),
 	)
+	box, _ := sdf.Box3D(sdf.V3{X: 10, Y: 10, Z: 10}, 0)
+	box = sdf.Transform3D(box, sdf.Translate3d(sdf.V3{Z: 10}))
 	tor := ExtrudeAlongPath3D(path, shape)
+	tor = sdf.Union3D(box, tor)
+	tor = sdf.Transform3D(tor, sdf.RotateZ(1*sdf.Tau/24))
 
-	render.RenderSTLSlow(tor, 200, "pathTor.stl")
+	render.RenderSTLSlow(tor, 300, "pathTor.stl")
 
 }
 
 //Path2D is an interface that given a point in 3D space returns the closest point along the 2D curve and the normal vector at that point
 type Path2D interface {
-	Evaluate(p sdf.V2) (c sdf.V2, normal sdf.V2)
+	Evaluate(p sdf.V2) (c sdf.V2, normal sdf.V2, inside bool)
 	BoundingBox() sdf.Box2
 }
 
@@ -48,8 +52,8 @@ func NewCirclePath2D(radius float64) Path2D {
 	return &cp
 }
 
-func (cp *CirclePath2D) Evaluate(p sdf.V2) (c sdf.V2, n sdf.V2) {
-	return p.Normalize().MulScalar(cp.radius), p.Normalize()
+func (cp *CirclePath2D) Evaluate(p sdf.V2) (c sdf.V2, n sdf.V2, inside bool) {
+	return p.Normalize().MulScalar(cp.radius), p.Normalize(), true
 }
 
 func (cp *CirclePath2D) BoundingBox() sdf.Box2 {
@@ -58,10 +62,11 @@ func (cp *CirclePath2D) BoundingBox() sdf.Box2 {
 
 //PartialCirclePath2D is a Path2D of a circular path with a radius
 type PartialCirclePath2D struct {
-	radius      float64
+	startRadius float64
 	startAngle  float64
 	startPoint  sdf.V2
 	startNormal sdf.V2
+	endRadius   float64
 	endAngle    float64
 	endPoint    sdf.V2
 	endNormal   sdf.V2
@@ -69,27 +74,33 @@ type PartialCirclePath2D struct {
 }
 
 //NewCirclePath2D makes a new CirclePath2D
-func NewPartialCirclePath2D(radius, startAngle, endAngle float64) Path2D {
+func NewPartialCirclePath2D(startRadius, startAngle, endRadius, endAngle float64) Path2D {
 	cp := PartialCirclePath2D{}
-	cp.radius = radius
+	cp.startRadius = startRadius
 	cp.startAngle = startAngle
-	cp.startPoint = sdf.Rotate(startAngle).MulPosition(sdf.V2{X: radius})
+	cp.startPoint = sdf.Rotate(startAngle).MulPosition(sdf.V2{X: startAngle})
 	cp.startNormal = cp.startPoint.Normalize()
+	cp.endRadius = endRadius
 	cp.endAngle = endAngle
-	cp.endPoint = sdf.Rotate(endAngle).MulPosition(sdf.V2{X: radius})
+	cp.endPoint = sdf.Rotate(endAngle).MulPosition(sdf.V2{X: endRadius})
 	cp.endNormal = cp.endPoint.Normalize()
-	cp.bb = sdf.NewBox2(sdf.V2{}, sdf.V2{X: radius * 2, Y: radius * 2})
+	cp.bb = sdf.NewBox2(sdf.V2{}, sdf.V2{X: math.Max(startRadius, endRadius) * 2, Y: math.Max(startRadius, endRadius) * 2})
 	return &cp
 }
 
-func (cp *PartialCirclePath2D) Evaluate(p sdf.V2) (c sdf.V2, n sdf.V2) {
+func (cp *PartialCirclePath2D) Evaluate(p sdf.V2) (c sdf.V2, n sdf.V2, inside bool) {
+
 	angle := math.Atan2(p.Y, p.X)
-	if angle > cp.endAngle {
-		return cp.endPoint, cp.endNormal
-	} else if angle < cp.startAngle {
-		return cp.startPoint, cp.startNormal
+	if angle >= cp.endAngle {
+		return cp.endPoint, cp.endNormal, false
+	} else if angle <= cp.startAngle {
+		return cp.startPoint, cp.startNormal, false
 	} else {
-		return p.Normalize().MulScalar(cp.radius), p.Normalize()
+		deltaRadius := cp.endRadius - cp.startRadius
+		deltaAngle := cp.endAngle - cp.startAngle
+		pangle := (angle - cp.startAngle) / deltaAngle
+		radius := pangle*deltaRadius + cp.startRadius
+		return p.Normalize().MulScalar(radius), p.Normalize(), true
 	}
 }
 
@@ -122,22 +133,23 @@ func ExtrudeAlongPath3D(path Path2D, shape sdf.SDF2) sdf.SDF3 {
 
 func (elp *ExtrudeAlongPathSDF3) Evaluate(p sdf.V3) float64 {
 	p2D := sdf.V2{X: p.X, Y: p.Y}
-	nearestP, normalV := elp.path.Evaluate(p2D)
+	nearestP, normalV, inside := elp.path.Evaluate(p2D)
 
 	shiftedP2 := p2D.Sub(nearestP)
-	if math.Abs(shiftedP2.Cross(normalV)) < _tolerance {
-		q2 := sdf.V2{X: p.Z, Y: p2D.Sub(nearestP).Div(normalV).Y}
-		return elp.shape.Evaluate(q2)
+
+	angle := math.Atan2(normalV.Y, normalV.X)
+	rotp2 := sdf.Rotate(-angle).MulPosition(shiftedP2)
+	q2 := sdf.V2{X: p.Z, Y: rotp2.X}
+	distanceAtProjectedSurface := elp.shape.Evaluate(q2)
+	if inside {
+		return distanceAtProjectedSurface
 	} else {
-		angle := math.Atan2(normalV.Y, normalV.X)
-		rotp2 := sdf.Rotate(-angle).MulPosition(shiftedP2)
-		q2 := sdf.V2{X: p.Z, Y: rotp2.X}
-		distanceAtProjectedSurface := elp.shape.Evaluate(q2)
-		if distanceAtProjectedSurface < 0 {
+		return math.Max(distanceAtProjectedSurface, math.Abs((rotp2.Y)))
+		/*if distanceAtProjectedSurface < 0 {
 			return math.Abs(rotp2.Y)
 		} else {
 			return sdf.V2{X: distanceAtProjectedSurface, Y: rotp2.Y}.Length()
-		}
+		}*/
 	}
 
 }
