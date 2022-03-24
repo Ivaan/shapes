@@ -4,8 +4,9 @@ import "github.com/deadsy/sdfx/sdf"
 
 type KeyNodule struct {
 	tops         []sdf.SDF3
+	topHoles     []sdf.SDF3
 	backs        []sdf.SDF3
-	holes        []sdf.SDF3
+	backHoles    []sdf.SDF3
 	keycapHitbox sdf.SDF3
 	switchHitbox sdf.SDF3
 }
@@ -14,12 +15,16 @@ func (kn KeyNodule) GetTops() []sdf.SDF3 {
 	return kn.tops
 }
 
+func (kn KeyNodule) GetTopHoles() []sdf.SDF3 {
+	return kn.topHoles
+}
+
 func (kn KeyNodule) GetBacks() []sdf.SDF3 {
 	return kn.backs
 }
 
-func (kn KeyNodule) GetHoles() []sdf.SDF3 {
-	return kn.holes
+func (kn KeyNodule) GetBackHoles() []sdf.SDF3 {
+	return kn.backHoles
 }
 
 func (kn KeyNodule) GetHitBoxes() []sdf.SDF3 {
@@ -61,6 +66,14 @@ func (knp KeyNoduleProperties) MakeKey(orientAndMove sdf.M44) (*KeyNodule, error
 	hollow = sdf.Transform3D(hollow, sdf.Translate3d(sdf.V3{Z: -knp.sphereCut}))
 	hollow = sdf.Cut3D(hollow, sdf.V3{X: 0, Y: 0, Z: -knp.plateThickness}, sdf.V3{X: 0, Y: 0, Z: -1})
 
+	clearingCylinder, err := sdf.Cylinder3D(knp.sphereRadius*2, knp.sphereRadius-knp.sphereThicknes, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	topClearingCylinder := sdf.Transform3D(clearingCylinder, sdf.Translate3d(sdf.V3{Z: -knp.sphereRadius - knp.backCoverkcut}))
+	bottomClearingCylinder := sdf.Transform3D(clearingCylinder, sdf.Translate3d(sdf.V3{Z: knp.sphereRadius - knp.backCoverkcut}))
+
 	switchHole, err := sdf.Box3D(sdf.V3{X: knp.switchHoleWidth, Y: knp.switchHoleLength, Z: knp.plateThickness}, 0)
 	if err != nil {
 		return nil, err
@@ -87,11 +100,14 @@ func (knp KeyNoduleProperties) MakeKey(orientAndMove sdf.M44) (*KeyNodule, error
 	switchHole = sdf.Transform3D(switchHole, orientAndMove)
 	switchFlatzone = sdf.Transform3D(switchFlatzone, orientAndMove)
 	shellBottom = sdf.Transform3D(shellBottom, orientAndMove)
+	topClearingCylinder = sdf.Transform3D(topClearingCylinder, orientAndMove)
+	bottomClearingCylinder = sdf.Transform3D(bottomClearingCylinder, orientAndMove)
 
 	return &KeyNodule{
-			tops:  []sdf.SDF3{shellTop},
-			backs: []sdf.SDF3{shellBottom},
-			holes: []sdf.SDF3{hollow, switchHole, switchFlatzone},
+			tops:      []sdf.SDF3{shellTop},
+			topHoles:  []sdf.SDF3{hollow, switchHole, switchFlatzone, topClearingCylinder},
+			backs:     []sdf.SDF3{shellBottom},
+			backHoles: []sdf.SDF3{hollow, switchHole, switchFlatzone, bottomClearingCylinder},
 			//keycapHitbox sdf.SDF3
 			//switchHitbox sdf.SDF3
 		},

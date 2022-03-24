@@ -4,8 +4,9 @@ import "github.com/deadsy/sdfx/sdf"
 
 type Nodule interface {
 	GetTops() []sdf.SDF3
+	GetTopHoles() []sdf.SDF3
 	GetBacks() []sdf.SDF3
-	GetHoles() []sdf.SDF3
+	GetBackHoles() []sdf.SDF3
 	GetHitBoxes() []sdf.SDF3
 }
 
@@ -24,6 +25,19 @@ func (nc NoduleCollection) GetTops() []sdf.SDF3 {
 	return tops
 }
 
+func (nc NoduleCollection) GetTopHoles() []sdf.SDF3 {
+	totalLength := 0
+	for _, n := range nc {
+		totalLength += len(n.GetTopHoles())
+	}
+	holes := make([]sdf.SDF3, totalLength)
+	var i int
+	for _, n := range nc {
+		i += copy(holes[i:], n.GetTopHoles())
+	}
+	return holes
+}
+
 func (nc NoduleCollection) GetBacks() []sdf.SDF3 {
 	totalLength := 0
 	for _, n := range nc {
@@ -37,15 +51,15 @@ func (nc NoduleCollection) GetBacks() []sdf.SDF3 {
 	return backs
 }
 
-func (nc NoduleCollection) GetHoles() []sdf.SDF3 {
+func (nc NoduleCollection) GetBackHoles() []sdf.SDF3 {
 	totalLength := 0
 	for _, n := range nc {
-		totalLength += len(n.GetHoles())
+		totalLength += len(n.GetBackHoles())
 	}
 	holes := make([]sdf.SDF3, totalLength)
 	var i int
 	for _, n := range nc {
-		i += copy(holes[i:], n.GetHoles())
+		i += copy(holes[i:], n.GetBackHoles())
 	}
 	return holes
 }
