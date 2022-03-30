@@ -19,6 +19,16 @@ type Column struct {
 	keySpacing   float64
 }
 
+func (col Column) getColumnNodule(makeBubbleKey func(sdf.M44) KeyNodule) ColumnNodule {
+	points := col.getKeyLocations()
+	nodes := make([]KeyNodule, len(points))
+
+	for i, p := range points {
+		nodes[i] = makeBubbleKey(p)
+	}
+	return ColumnNodule{keys: nodes}
+}
+
 func (col Column) getKeyLocations() []sdf.M44 {
 	points := spacedPointsOnAnArc(sdf.DtoR(col.startAngle), col.startRadius, sdf.DtoR(col.endAngle), col.endRadius, col.keySpacing, col.numberOfKeys)
 	places := make([]sdf.M44, len(points))
@@ -118,4 +128,42 @@ type angleRadiusPointDistance struct {
 type locationWithAngle struct {
 	location sdf.V2
 	angle    float64
+}
+
+type ColumnNodule struct {
+	keys []KeyNodule
+}
+
+func (cn ColumnNodule) GetTops() []sdf.SDF3 {
+	return []sdf.SDF3{
+		sdf.Difference3D(
+			sdf.Union3D(AccumulateSDF3FromKeyNodule(cn.keys, func(kn KeyNodule) []sdf.SDF3 { return kn.tops })...),
+			sdf.Union3D(AccumulateSDF3FromKeyNodule(cn.keys, func(kn KeyNodule) []sdf.SDF3 { return kn.topColumnHoles })...),
+		),
+	}
+}
+func (cn ColumnNodule) GetTopHoles() []sdf.SDF3 {
+	return AccumulateSDF3FromKeyNodule(cn.keys, func(kn KeyNodule) []sdf.SDF3 { return kn.topHoles })
+}
+func (cn ColumnNodule) GetBacks() []sdf.SDF3 {
+	return AccumulateSDF3FromKeyNodule(cn.keys, func(kn KeyNodule) []sdf.SDF3 { return kn.backs })
+}
+func (cn ColumnNodule) GetBackHoles() []sdf.SDF3 {
+	return AccumulateSDF3FromKeyNodule(cn.keys, func(kn KeyNodule) []sdf.SDF3 { return kn.backHoles })
+}
+func (cn ColumnNodule) GetHitBoxes() []sdf.SDF3 {
+	return AccumulateSDF3FromKeyNodule(cn.keys, func(kn KeyNodule) []sdf.SDF3 { return kn.GetHitBoxes() })
+}
+
+func AccumulateSDF3FromKeyNodule(kns []KeyNodule, getSDF3s func(KeyNodule) []sdf.SDF3) []sdf.SDF3 {
+	totalLength := 0
+	for _, kn := range kns {
+		totalLength += len(getSDF3s(kn))
+	}
+	sdfs := make([]sdf.SDF3, totalLength)
+	var i int
+	for _, kn := range kns {
+		i += copy(sdfs[i:], getSDF3s(kn))
+	}
+	return sdfs
 }
