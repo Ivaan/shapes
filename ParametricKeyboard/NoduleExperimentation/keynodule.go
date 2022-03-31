@@ -1,6 +1,8 @@
 package main
 
 import (
+	"math"
+
 	"github.com/deadsy/sdfx/sdf"
 )
 
@@ -55,7 +57,6 @@ type BubbleKeyNoduleProperties struct {
 	keycapMaxHeight          float64
 	keycapClearanced         float64
 	keycapRound              float64
-	keycapOffset             float64
 	laneWidth                float64 //as in "Stay in your lane" this restricts the holes to a max width
 }
 
@@ -67,6 +68,10 @@ func (knp BubbleKeyNoduleProperties) MakeBubbleKey(orientAndMove sdf.M44) KeyNod
 
 	shell = sdf.Transform3D(shell, sdf.Translate3d(sdf.V3{Z: -knp.sphereCut}))
 	shell = sdf.Cut3D(shell, sdf.V3{X: 0, Y: 0, Z: 0}, sdf.V3{X: 0, Y: 0, Z: -1})
+
+	radiusAtCut := math.Sqrt(knp.sphereRadius*knp.sphereRadius - knp.sphereCut*knp.sphereCut)
+	huggingCylinder, _ := sdf.Cylinder3D((knp.keycapMaxHeight+knp.keycapMinHeight)/2+knp.keycapRound*2, radiusAtCut, knp.keycapRound*2)
+	huggingCylinder = sdf.Transform3D(huggingCylinder, sdf.Translate3d(sdf.V3{Z: ((knp.keycapMaxHeight+knp.keycapMinHeight)/2+knp.keycapRound*2)/2 - knp.keycapRound*2}))
 
 	hollow, err := sdf.Sphere3D(knp.sphereRadius - knp.sphereThicknes)
 	if err != nil {
@@ -100,11 +105,11 @@ func (knp BubbleKeyNoduleProperties) MakeBubbleKey(orientAndMove sdf.M44) KeyNod
 	switchFlatzone = sdf.Transform3D(switchFlatzone, sdf.Translate3d(sdf.V3{Z: knp.keycapMinHeight / 2}))
 
 	keyCapClearanceShadow := sdf.Box2D(sdf.V2{X: knp.keycapWidth + knp.keycapClearanced, Y: knp.keycapLength + knp.keycapClearanced}, knp.keycapRound+knp.keycapClearanced)
-	keyCapClearance, err := sdf.ExtrudeRounded3D(keyCapClearanceShadow, knp.keycapMaxHeight-knp.keycapMinHeight, 0)
+	keyCapClearance, err := sdf.ExtrudeRounded3D(keyCapClearanceShadow, knp.keycapMaxHeight*2, 0)
 	if err != nil {
 		panic(err)
 	}
-	keyCapClearance = sdf.Transform3D(keyCapClearance, sdf.Translate3d(sdf.V3{Z: (knp.keycapMaxHeight-knp.keycapMinHeight)/2 + knp.keycapMinHeight}))
+	keyCapClearance = sdf.Transform3D(keyCapClearance, sdf.Translate3d(sdf.V3{Z: knp.keycapMaxHeight + knp.keycapMinHeight}))
 
 	lane, err := sdf.Box3D(sdf.V3{X: knp.laneWidth, Y: knp.sphereRadius * 2, Z: knp.sphereRadius * 2}, 0)
 	if err != nil {
@@ -120,6 +125,7 @@ func (knp BubbleKeyNoduleProperties) MakeBubbleKey(orientAndMove sdf.M44) KeyNod
 
 	lane = sdf.Transform3D(lane, orientAndMove)
 	shellTop = sdf.Transform3D(shellTop, orientAndMove)
+	huggingCylinder = sdf.Transform3D(huggingCylinder, orientAndMove)
 	hollow = sdf.Transform3D(hollow, orientAndMove)
 	switchHole = sdf.Transform3D(switchHole, orientAndMove)
 	switchFlatzone = sdf.Transform3D(switchFlatzone, orientAndMove)
@@ -129,7 +135,7 @@ func (knp BubbleKeyNoduleProperties) MakeBubbleKey(orientAndMove sdf.M44) KeyNod
 	bottomClearingCylinder = sdf.Transform3D(bottomClearingCylinder, orientAndMove)
 
 	return KeyNodule{
-		tops:           []sdf.SDF3{shellTop},
+		tops:           []sdf.SDF3{shellTop, huggingCylinder},
 		topColumnHoles: []sdf.SDF3{hollow},
 		topHoles:       []sdf.SDF3{switchHole, switchFlatzone, keyCapClearance, sdf.Intersect3D(hollow, lane), sdf.Intersect3D(topClearingCylinder, lane)},
 		backs:          []sdf.SDF3{shellBottom},
