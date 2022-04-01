@@ -22,8 +22,9 @@ func main() {
 		keycapLength:             18.6,
 		keycapMinHeight:          3,
 		keycapMaxHeight:          13,
+		keycapBottomRestHeight:   6.4,
 		keycapClearanced:         2.5,
-		keycapRound:              1.5,
+		keycapRound:              1.2,
 		laneWidth:                19,
 	}
 
@@ -74,16 +75,16 @@ func main() {
 		},
 	}
 
-	//single key
+	// //dual key
 	// cols = []Column{
 	// 	{ //H
 	// 		offset:       sdf.V3{X: -19.1},
 	// 		splayAngle:   0,
 	// 		convexAngle:  0,
-	// 		numberOfKeys: 1,
-	// 		startAngle:   -20,
+	// 		numberOfKeys: 2,
+	// 		startAngle:   0,
 	// 		startRadius:  60,
-	// 		endAngle:     75,
+	// 		endAngle:     95,
 	// 		endRadius:    85,
 	// 		keySpacing:   19.1,
 	// 	},
@@ -112,10 +113,10 @@ func main() {
 	back := sdf.Difference3D(sdf.Union3D(nodesC.GetBacks()...), sdf.Union3D(nodesC.GetBackHoles()...))
 
 	//render.RenderSTLSlow(sdf.Intersect3D(top, back), 300, "overlap.stl")
-	render.RenderSTLSlow(top, 350, "top.stl")
-	render.RenderSTLSlow(back, 300, "back.stl")
-	// render.RenderSTL(top, 350, "top.stl")
-	// render.RenderSTL(back, 300, "back.stl")
+	// render.RenderSTLSlow(top, 350, "top.stl")
+	// render.RenderSTLSlow(back, 300, "back.stl")
+	render.RenderSTL(top, 350, "top.stl")
+	render.RenderSTL(back, 300, "back.stl")
 
 }
 

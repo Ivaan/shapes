@@ -55,6 +55,7 @@ type BubbleKeyNoduleProperties struct {
 	keycapWidth              float64
 	keycapMinHeight          float64
 	keycapMaxHeight          float64
+	keycapBottomRestHeight   float64
 	keycapClearanced         float64
 	keycapRound              float64
 	laneWidth                float64 //as in "Stay in your lane" this restricts the holes to a max width
@@ -66,35 +67,38 @@ func (knp BubbleKeyNoduleProperties) MakeBubbleKey(orientAndMove sdf.M44) KeyNod
 		panic(err)
 	}
 
-	shell = sdf.Transform3D(shell, sdf.Translate3d(sdf.V3{Z: -knp.sphereCut}))
-	shell = sdf.Cut3D(shell, sdf.V3{X: 0, Y: 0, Z: 0}, sdf.V3{X: 0, Y: 0, Z: -1})
+	shell = sdf.Transform3D(shell, sdf.Translate3d(sdf.V3{Z: -knp.sphereCut - knp.keycapBottomRestHeight}))
+	//shell = sdf.Cut3D(shell, sdf.V3{X: 0, Y: 0, Z: - knp.keycapBottomRestHeight}, sdf.V3{X: 0, Y: 0, Z: -1})
 
 	radiusAtCut := math.Sqrt(knp.sphereRadius*knp.sphereRadius - knp.sphereCut*knp.sphereCut)
-	huggingCylinder, _ := sdf.Cylinder3D((knp.keycapMaxHeight+knp.keycapMinHeight)/2+knp.keycapRound*2, radiusAtCut, knp.keycapRound*2)
-	huggingCylinder = sdf.Transform3D(huggingCylinder, sdf.Translate3d(sdf.V3{Z: ((knp.keycapMaxHeight+knp.keycapMinHeight)/2+knp.keycapRound*2)/2 - knp.keycapRound*2}))
+	huggingCylinder, err := sdf.Cylinder3D((knp.keycapMaxHeight+knp.keycapMinHeight)/2+knp.keycapRound*2, radiusAtCut, knp.keycapRound*2)
+	if err != nil {
+		panic(err)
+	}
+	huggingCylinder = sdf.Transform3D(huggingCylinder, sdf.Translate3d(sdf.V3{Z: ((knp.keycapMaxHeight+knp.keycapMinHeight)/2+knp.keycapRound*2)/2 - knp.keycapRound*2 - knp.keycapBottomRestHeight}))
 
 	hollow, err := sdf.Sphere3D(knp.sphereRadius - knp.sphereThicknes)
 	if err != nil {
 		panic(err)
 	}
 
-	hollow = sdf.Transform3D(hollow, sdf.Translate3d(sdf.V3{Z: -knp.sphereCut}))
-	hollow = sdf.Cut3D(hollow, sdf.V3{X: 0, Y: 0, Z: -knp.plateThickness}, sdf.V3{X: 0, Y: 0, Z: -1})
+	hollow = sdf.Transform3D(hollow, sdf.Translate3d(sdf.V3{Z: -knp.sphereCut - knp.keycapBottomRestHeight}))
+	hollow = sdf.Cut3D(hollow, sdf.V3{X: 0, Y: 0, Z: -knp.plateThickness - knp.keycapBottomRestHeight}, sdf.V3{X: 0, Y: 0, Z: -1})
 
 	clearingCylinder, err := sdf.Cylinder3D(knp.sphereRadius*2, knp.sphereRadius-knp.sphereThicknes, 0)
 	if err != nil {
 		panic(err)
 	}
 
-	topClearingCylinder := sdf.Transform3D(clearingCylinder, sdf.Translate3d(sdf.V3{Z: -knp.sphereRadius - knp.backCoverkcut}))
-	bottomClearingCylinder := sdf.Transform3D(clearingCylinder, sdf.Translate3d(sdf.V3{Z: knp.sphereRadius - knp.backCoverkcut}))
+	topClearingCylinder := sdf.Transform3D(clearingCylinder, sdf.Translate3d(sdf.V3{Z: -knp.sphereRadius - knp.backCoverkcut - knp.keycapBottomRestHeight}))
+	bottomClearingCylinder := sdf.Transform3D(clearingCylinder, sdf.Translate3d(sdf.V3{Z: knp.sphereRadius - knp.backCoverkcut - knp.keycapBottomRestHeight}))
 
 	switchHole, err := sdf.Box3D(sdf.V3{X: knp.switchHoleWidth, Y: knp.switchHoleLength, Z: knp.plateThickness}, 0)
 	if err != nil {
 		panic(err)
 	}
 
-	switchHole = sdf.Transform3D(switchHole, sdf.Translate3d(sdf.V3{Z: -knp.plateThickness / 2}))
+	switchHole = sdf.Transform3D(switchHole, sdf.Translate3d(sdf.V3{Z: -knp.plateThickness/2 - knp.keycapBottomRestHeight}))
 	//todo: add latch reliefs
 
 	switchFlatzone, err := sdf.Box3D(sdf.V3{X: knp.switchFlatzoneWidth, Y: knp.switchFlatzoneLength, Z: knp.keycapMinHeight}, 0)
@@ -102,22 +106,22 @@ func (knp BubbleKeyNoduleProperties) MakeBubbleKey(orientAndMove sdf.M44) KeyNod
 		panic(err)
 	}
 
-	switchFlatzone = sdf.Transform3D(switchFlatzone, sdf.Translate3d(sdf.V3{Z: knp.keycapMinHeight / 2}))
+	switchFlatzone = sdf.Transform3D(switchFlatzone, sdf.Translate3d(sdf.V3{Z: knp.keycapMinHeight/2 - knp.keycapBottomRestHeight}))
 
 	keyCapClearanceShadow := sdf.Box2D(sdf.V2{X: knp.keycapWidth + knp.keycapClearanced, Y: knp.keycapLength + knp.keycapClearanced}, knp.keycapRound+knp.keycapClearanced)
 	keyCapClearance, err := sdf.ExtrudeRounded3D(keyCapClearanceShadow, knp.keycapMaxHeight*2, 0)
 	if err != nil {
 		panic(err)
 	}
-	keyCapClearance = sdf.Transform3D(keyCapClearance, sdf.Translate3d(sdf.V3{Z: knp.keycapMaxHeight + knp.keycapMinHeight}))
+	keyCapClearance = sdf.Transform3D(keyCapClearance, sdf.Translate3d(sdf.V3{Z: knp.keycapMaxHeight + knp.keycapMinHeight - knp.keycapBottomRestHeight}))
 
 	lane, err := sdf.Box3D(sdf.V3{X: knp.laneWidth, Y: knp.sphereRadius * 2, Z: knp.sphereRadius * 2}, 0)
 	if err != nil {
 		panic(err)
 	}
-	lane = sdf.Transform3D(lane, sdf.Translate3d(sdf.V3{Z: -knp.sphereCut}))
+	lane = sdf.Transform3D(lane, sdf.Translate3d(sdf.V3{Z: -knp.sphereCut - knp.keycapBottomRestHeight}))
 
-	coverCutA := sdf.V3{Z: -knp.backCoverkcut}
+	coverCutA := sdf.V3{Z: -knp.backCoverkcut - knp.keycapBottomRestHeight}
 	coverTopV := sdf.V3{Z: 1}
 	coverBottomtV := sdf.V3{Z: -1}
 	shellTop := sdf.Cut3D(shell, coverCutA, coverTopV)
