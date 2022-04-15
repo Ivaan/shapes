@@ -7,32 +7,10 @@ import (
 )
 
 type KeyNodule struct {
-	tops           []sdf.SDF3
-	topColumnHoles []sdf.SDF3
-	topHoles       []sdf.SDF3
-	backs          []sdf.SDF3
-	backHoles      []sdf.SDF3
-	keycapHitbox   sdf.SDF3
-	switchHitbox   sdf.SDF3
-}
-
-func (kn KeyNodule) GetTops() []sdf.SDF3 {
-	return kn.tops
-}
-func (kn KeyNodule) GetTopColumnHoles() []sdf.SDF3 {
-	return kn.topColumnHoles
-}
-
-func (kn KeyNodule) GetTopHoles() []sdf.SDF3 {
-	return kn.topHoles
-}
-
-func (kn KeyNodule) GetBacks() []sdf.SDF3 {
-	return kn.backs
-}
-
-func (kn KeyNodule) GetBackHoles() []sdf.SDF3 {
-	return kn.backHoles
+	Top          Nodule
+	Bottom       Nodule
+	keycapHitbox sdf.SDF3
+	switchHitbox sdf.SDF3
 }
 
 func (kn KeyNodule) GetHitBoxes() []sdf.SDF3 {
@@ -122,13 +100,16 @@ func (knp BubbleKeyNoduleProperties) MakeBubbleKey(orientAndMove sdf.M44) KeyNod
 	lane = sdf.Transform3D(lane, sdf.Translate3d(sdf.V3{Z: -knp.sphereCut - knp.keycapBottomRestHeight}))
 
 	coverCutA := sdf.V3{Z: -knp.backCoverkcut - knp.keycapBottomRestHeight}
+	plateCut := sdf.V3{Z: -knp.plateThickness - knp.keycapBottomRestHeight}
 	coverTopV := sdf.V3{Z: 1}
 	coverBottomtV := sdf.V3{Z: -1}
 	shellTop := sdf.Cut3D(shell, coverCutA, coverTopV)
 	shellBottom := sdf.Cut3D(shell, coverCutA, coverBottomtV)
+	plate := sdf.Cut3D(shell, plateCut, coverTopV)
 
 	lane = sdf.Transform3D(lane, orientAndMove)
 	shellTop = sdf.Transform3D(shellTop, orientAndMove)
+	plate = sdf.Transform3D(plate, orientAndMove)
 	huggingCylinder = sdf.Transform3D(huggingCylinder, orientAndMove)
 	hollow = sdf.Transform3D(hollow, orientAndMove)
 	switchHole = sdf.Transform3D(switchHole, orientAndMove)
@@ -139,11 +120,16 @@ func (knp BubbleKeyNoduleProperties) MakeBubbleKey(orientAndMove sdf.M44) KeyNod
 	bottomClearingCylinder = sdf.Transform3D(bottomClearingCylinder, orientAndMove)
 
 	return KeyNodule{
-		tops:           []sdf.SDF3{shellTop, huggingCylinder},
-		topColumnHoles: []sdf.SDF3{hollow},
-		topHoles:       []sdf.SDF3{switchHole, switchFlatzone, keyCapClearance, sdf.Intersect3D(hollow, lane), sdf.Intersect3D(topClearingCylinder, lane)},
-		backs:          []sdf.SDF3{shellBottom},
-		backHoles:      []sdf.SDF3{hollow, switchHole, switchFlatzone, bottomClearingCylinder},
+		Top: MakeNodule(
+			[]sdf.SDF3{switchHole, switchFlatzone, keyCapClearance, sdf.Intersect3D(hollow, lane), sdf.Intersect3D(topClearingCylinder, lane)}, //hole rank 0
+			[]sdf.SDF3{sdf.Intersect3D(plate, lane), huggingCylinder},                                                                          //thing rank 0
+			[]sdf.SDF3{hollow, shellBottom}, //hole rank 1
+			[]sdf.SDF3{shellTop},            //thing rank 1
+		),
+		Bottom: MakeNodule(
+			[]sdf.SDF3{hollow, switchHole, switchFlatzone, bottomClearingCylinder}, //hole rank 0
+			[]sdf.SDF3{shellBottom}, //thing rank 0
+		),
 		//keycapHitbox sdf.SDF3
 		//switchHitbox sdf.SDF3
 	}
@@ -231,10 +217,10 @@ func (knp FlatterKeyNoduleProperties) MakeFlatterKey(orientAndMove sdf.M44) (*Ke
 	bottomClearingCylinder = sdf.Transform3D(bottomClearingCylinder, orientAndMove)
 
 	return &KeyNodule{
-			tops:      []sdf.SDF3{top},
-			topHoles:  []sdf.SDF3{switchHole, switchFlatzone, pcbCutAway},
-			backs:     []sdf.SDF3{shellBottom},
-			backHoles: []sdf.SDF3{hollow, switchHole, switchFlatzone, bottomClearingCylinder},
+			// tops:      []sdf.SDF3{top},
+			// topHoles:  []sdf.SDF3{switchHole, switchFlatzone, pcbCutAway},
+			// backs:     []sdf.SDF3{shellBottom},
+			// backHoles: []sdf.SDF3{hollow, switchHole, switchFlatzone, bottomClearingCylinder},
 			//keycapHitbox sdf.SDF3
 			//switchHitbox sdf.SDF3
 		},

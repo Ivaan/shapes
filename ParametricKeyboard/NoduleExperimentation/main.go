@@ -29,17 +29,17 @@ func main() {
 	}
 
 	cols := []Column{
-		{ //H
-			offset:       sdf.V3{X: -19.1},
-			splayAngle:   0,
-			convexAngle:  0,
-			numberOfKeys: 4,
-			startAngle:   -20,
-			startRadius:  60,
-			endAngle:     75,
-			endRadius:    85,
-			keySpacing:   19.1,
-		},
+		// { //H
+		// 	offset:       sdf.V3{X: -19.1},
+		// 	splayAngle:   0,
+		// 	convexAngle:  0,
+		// 	numberOfKeys: 4,
+		// 	startAngle:   -20,
+		// 	startRadius:  60,
+		// 	endAngle:     75,
+		// 	endRadius:    85,
+		// 	keySpacing:   19.1,
+		// },
 		{ //J
 			offset:       sdf.V3{},
 			splayAngle:   0,
@@ -52,7 +52,7 @@ func main() {
 			keySpacing:   19.1,
 		},
 		{ //K
-			offset:       sdf.V3{X: 21},
+			offset:       sdf.V3{X: 23},
 			splayAngle:   5,
 			convexAngle:  0,
 			numberOfKeys: 4,
@@ -62,17 +62,17 @@ func main() {
 			endRadius:    95,
 			keySpacing:   19.1,
 		},
-		{ //L
-			offset:       sdf.V3{X: 42},
-			splayAngle:   10,
-			convexAngle:  0,
-			numberOfKeys: 4,
-			startAngle:   -20,
-			startRadius:  62.5,
-			endAngle:     75,
-			endRadius:    90,
-			keySpacing:   19.1,
-		},
+		// { //L
+		// 	offset:       sdf.V3{X: 42},
+		// 	splayAngle:   10,
+		// 	convexAngle:  0,
+		// 	numberOfKeys: 4,
+		// 	startAngle:   -20,
+		// 	startRadius:  62.5,
+		// 	endAngle:     75,
+		// 	endRadius:    90,
+		// 	keySpacing:   19.1,
+		// },
 	}
 
 	// //dual key
@@ -102,15 +102,22 @@ func main() {
 	// 	}
 
 	// }
-	colNodules := make([]Nodule, len(cols))
-	for i, col := range cols {
-		colNodules[i] = Nodule(col.getColumnNodule(knp.MakeBubbleKey))
-	}
-	nodesC := NoduleCollection(colNodules)
-	//nodes = NoduleCollection([]Nodule{node1})
 
-	top := sdf.Difference3D(sdf.Union3D(nodesC.GetTops()...), sdf.Union3D(nodesC.GetTopHoles()...))
-	back := sdf.Difference3D(sdf.Union3D(nodesC.GetBacks()...), sdf.Union3D(nodesC.GetBackHoles()...))
+	points := make([]sdf.M44, 0)
+	for _, col := range cols {
+		points = append(points, col.getKeyLocations()...)
+	}
+
+	topNodules := make([]Nodule, len(points))
+	bottomNodules := make([]Nodule, len(points))
+
+	for i, p := range points {
+		bubbleKey := knp.MakeBubbleKey(p)
+		topNodules[i] = bubbleKey.Top
+		bottomNodules[i] = bubbleKey.Bottom
+	}
+	top := NoduleCollection(topNodules).Combine()
+	back := NoduleCollection(bottomNodules).Combine()
 
 	//render.RenderSTLSlow(sdf.Intersect3D(top, back), 300, "overlap.stl")
 	// render.RenderSTLSlow(top, 350, "top.stl")

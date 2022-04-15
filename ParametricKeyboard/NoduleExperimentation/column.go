@@ -134,26 +134,26 @@ type ColumnNodule struct {
 	keys []KeyNodule
 }
 
-func (cn ColumnNodule) GetTops() []sdf.SDF3 {
-	return []sdf.SDF3{
-		sdf.Difference3D(
-			sdf.Union3D(AccumulateSDF3FromKeyNodule(cn.keys, func(kn KeyNodule) []sdf.SDF3 { return kn.tops })...),
-			sdf.Union3D(AccumulateSDF3FromKeyNodule(cn.keys, func(kn KeyNodule) []sdf.SDF3 { return kn.topColumnHoles })...),
-		),
-	}
-}
-func (cn ColumnNodule) GetTopHoles() []sdf.SDF3 {
-	return AccumulateSDF3FromKeyNodule(cn.keys, func(kn KeyNodule) []sdf.SDF3 { return kn.topHoles })
-}
-func (cn ColumnNodule) GetBacks() []sdf.SDF3 {
-	return AccumulateSDF3FromKeyNodule(cn.keys, func(kn KeyNodule) []sdf.SDF3 { return kn.backs })
-}
-func (cn ColumnNodule) GetBackHoles() []sdf.SDF3 {
-	return AccumulateSDF3FromKeyNodule(cn.keys, func(kn KeyNodule) []sdf.SDF3 { return kn.backHoles })
-}
-func (cn ColumnNodule) GetHitBoxes() []sdf.SDF3 {
-	return AccumulateSDF3FromKeyNodule(cn.keys, func(kn KeyNodule) []sdf.SDF3 { return kn.GetHitBoxes() })
-}
+// func (cn ColumnNodule) GetTops() []sdf.SDF3 {
+// 	return []sdf.SDF3{
+// 		sdf.Difference3D(
+// 			sdf.Union3D(AccumulateSDF3FromKeyNodule(cn.keys, func(kn KeyNodule) []sdf.SDF3 { return kn.tops })...),
+// 			sdf.Union3D(AccumulateSDF3FromKeyNodule(cn.keys, func(kn KeyNodule) []sdf.SDF3 { return kn.topColumnHoles })...),
+// 		),
+// 	}
+// }
+// func (cn ColumnNodule) GetTopHoles() []sdf.SDF3 {
+// 	return AccumulateSDF3FromKeyNodule(cn.keys, func(kn KeyNodule) []sdf.SDF3 { return kn.topHoles })
+// }
+// func (cn ColumnNodule) GetBacks() []sdf.SDF3 {
+// 	return AccumulateSDF3FromKeyNodule(cn.keys, func(kn KeyNodule) []sdf.SDF3 { return kn.backs })
+// }
+// func (cn ColumnNodule) GetBackHoles() []sdf.SDF3 {
+// 	return AccumulateSDF3FromKeyNodule(cn.keys, func(kn KeyNodule) []sdf.SDF3 { return kn.backHoles })
+// }
+// func (cn ColumnNodule) GetHitBoxes() []sdf.SDF3 {
+// 	return AccumulateSDF3FromKeyNodule(cn.keys, func(kn KeyNodule) []sdf.SDF3 { return kn.GetHitBoxes() })
+// }
 
 func AccumulateSDF3FromKeyNodule(kns []KeyNodule, getSDF3s func(KeyNodule) []sdf.SDF3) []sdf.SDF3 {
 	totalLength := 0
