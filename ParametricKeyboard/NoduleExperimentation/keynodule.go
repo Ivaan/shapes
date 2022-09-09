@@ -46,7 +46,7 @@ type BubbleKeyNoduleProperties struct {
 	screwHeadDiameter        float64
 }
 
-func (knp BubbleKeyNoduleProperties) MakeBubbleKey(orientAndMove sdf.M44) KeyNodule {
+func (knp BubbleKeyNoduleProperties) MakeBubbleKey() KeyNodule {
 	shell, err := sdf.Sphere3D(knp.sphereRadius)
 	if err != nil {
 		panic(err)
@@ -157,21 +157,10 @@ func (knp BubbleKeyNoduleProperties) MakeBubbleKey(orientAndMove sdf.M44) KeyNod
 		screwHoles[i] = hole
 	}
 
-	lane = sdf.Transform3D(lane, orientAndMove)
-	shellTop = sdf.Transform3D(shellTop, orientAndMove)
-	plate = sdf.Transform3D(plate, orientAndMove)
-	huggingCylinder = sdf.Transform3D(huggingCylinder, orientAndMove)
-	hollow = sdf.Transform3D(hollow, orientAndMove)
-	switchHole = sdf.Transform3D(switchHole, orientAndMove)
-	switchFlatzone = sdf.Transform3D(switchFlatzone, orientAndMove)
-	keyCapClearance = sdf.Transform3D(keyCapClearance, orientAndMove)
-	shellBottom = sdf.Transform3D(shellBottom, orientAndMove)
-	topClearingCylinder = sdf.Transform3D(topClearingCylinder, orientAndMove)
-	bottomClearingCylinder = sdf.Transform3D(bottomClearingCylinder, orientAndMove)
-	allInsertHolders := sdf.Transform3D(sdf.Union3D(insertHolders...), orientAndMove)
-	allInsertHoldersHoles := sdf.Transform3D(sdf.Union3D(insertHoldersHoles...), orientAndMove)
-	allScrewChannels := sdf.Transform3D(sdf.Union3D(screwChannels...), orientAndMove)
-	allScrewHoles := sdf.Transform3D(sdf.Union3D(screwHoles...), orientAndMove)
+	allInsertHolders := sdf.Union3D(insertHolders...)
+	allInsertHoldersHoles := sdf.Union3D(insertHoldersHoles...)
+	allScrewChannels := sdf.Union3D(screwChannels...)
+	allScrewHoles := sdf.Union3D(screwHoles...)
 
 	return KeyNodule{
 		Top: MakeNodule(

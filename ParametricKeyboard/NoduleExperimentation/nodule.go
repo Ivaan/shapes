@@ -12,6 +12,17 @@ func MakeNodule(holesAndPairs ...[]sdf.SDF3) Nodule {
 	return Nodule{holesThenSolidPairs: holesAndPairs}
 }
 
+func (n Nodule) OrientAndMove(transform sdf.M44) Nodule {
+	movedHolesThenSolidPairs := make([][]sdf.SDF3, len(n.holesThenSolidPairs))
+	for i, sdf3s := range n.holesThenSolidPairs {
+		movedHolesThenSolidPairs[i] = make([]sdf.SDF3, len(n.holesThenSolidPairs[i]))
+		for j, sdf3 := range sdf3s {
+			movedHolesThenSolidPairs[i][j] = sdf.Transform3D(sdf3, transform)
+		}
+	}
+	return Nodule{holesThenSolidPairs: movedHolesThenSolidPairs}
+}
+
 type NoduleCollection []Nodule
 
 func (nc NoduleCollection) Combine() sdf.SDF3 {

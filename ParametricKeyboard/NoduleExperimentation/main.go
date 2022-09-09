@@ -133,10 +133,10 @@ func main() {
 	topNodules := make([]Nodule, len(points))
 	bottomNodules := make([]Nodule, len(points))
 
+	bubbleKey := knp.MakeBubbleKey()
 	for i, p := range points {
-		bubbleKey := knp.MakeBubbleKey(p)
-		topNodules[i] = bubbleKey.Top
-		bottomNodules[i] = bubbleKey.Bottom
+		topNodules[i] = bubbleKey.Top.OrientAndMove(p)
+		bottomNodules[i] = bubbleKey.Bottom.OrientAndMove(p)
 	}
 	top := NoduleCollection(topNodules).Combine()
 	back := NoduleCollection(bottomNodules).Combine()
