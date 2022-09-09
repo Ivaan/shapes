@@ -25,7 +25,14 @@ func main() {
 		keycapBottomRestHeight:   6.4,
 		keycapClearanced:         2.5,
 		keycapRound:              1.2,
+		huggingCylinderRound:     1.2,
 		laneWidth:                19,
+		insertLength:             8.0,
+		insertDiameter:           2.9,
+		insertWallThickness:      2.0,
+		screwThreadDiameter:      2.0,
+		screwThreadLength:        12.0,
+		screwHeadDiameter:        3.8,
 	}
 
 	cols := []Column{
@@ -89,6 +96,21 @@ func main() {
 	// 		keySpacing:   19.1,
 	// 	},
 	// }
+
+	// //single key
+	cols = []Column{
+		{
+			offset:       sdf.V3{},
+			splayAngle:   0,
+			convexAngle:  0,
+			numberOfKeys: 1,
+			startAngle:   0,
+			startRadius:  60,
+			endAngle:     95,
+			endRadius:    85,
+			keySpacing:   19.1,
+		},
+	}
 
 	// points := col1.getKeyLocations()
 	// points = append(points, col2.getKeyLocations()...)
