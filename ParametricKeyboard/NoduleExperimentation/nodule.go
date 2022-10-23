@@ -17,7 +17,9 @@ func (n Nodule) OrientAndMove(transform sdf.M44) Nodule {
 	for i, sdf3s := range n.holesThenSolidPairs {
 		movedHolesThenSolidPairs[i] = make([]sdf.SDF3, len(n.holesThenSolidPairs[i]))
 		for j, sdf3 := range sdf3s {
-			movedHolesThenSolidPairs[i][j] = sdf.Transform3D(sdf3, transform)
+			if sdf3 != nil {
+				movedHolesThenSolidPairs[i][j] = sdf.Transform3D(sdf3, transform)
+			}
 		}
 	}
 	return Nodule{holesThenSolidPairs: movedHolesThenSolidPairs}

@@ -46,7 +46,7 @@ type BubbleKeyNoduleProperties struct {
 	screwHeadDiameter                float64
 }
 
-func (knp BubbleKeyNoduleProperties) MakeBubbleKey() KeyNodule {
+func (knp BubbleKeyNoduleProperties) MakeBubbleKey(screwPossitions []int) KeyNodule {
 	sphereCenterZ := -knp.plateTopAtRadius - knp.keycapBottomHeightAbovePlateUp
 	topOfPlateZ := -knp.keycapBottomHeightAbovePlateUp
 	bottomOfPlateZ := topOfPlateZ - knp.plateThickness
@@ -124,7 +124,8 @@ func (knp BubbleKeyNoduleProperties) MakeBubbleKey() KeyNodule {
 	screwHoles := make([]sdf.SDF3, numberOfScrews)
 	insertHoldersHoles := make([]sdf.SDF3, numberOfScrews)
 
-	for i := 0; i < numberOfScrews; i++ {
+	for p := 0; p < len(screwPossitions); p++ {
+		i := screwPossitions[p]
 		angle := float64(i) * sdf.Tau / float64(numberOfScrews)
 		rotateIntoPlace := sdf.RotateZ(angle).Mul(sdf.Translate3d(sdf.V3{X: screwRadiusFromCenter}))
 
@@ -163,17 +164,21 @@ func (knp BubbleKeyNoduleProperties) MakeBubbleKey() KeyNodule {
 		screwHoles[i] = screwHole
 	}
 
-	allInsertHolders := sdf.Union3D(insertHolders...)
-	allInsertHoldersHoles := sdf.Union3D(insertHoldersHoles...)
-	allScrewChannels := sdf.Union3D(screwChannels...)
-	allScrewHoles := sdf.Union3D(screwHoles...)
-
+	var allInsertHolders, allInsertHoldersHoles, allScrewChannels, allScrewHoles sdf.SDF3
+	if len(screwPossitions) > 0 {
+		allInsertHolders = sdf.Union3D(insertHolders...)
+		allInsertHoldersHoles = sdf.Union3D(insertHoldersHoles...)
+		allScrewChannels = sdf.Union3D(screwChannels...)
+		allScrewHoles = sdf.Union3D(screwHoles...)
+	}
 	return KeyNodule{
 		Top: MakeNodule(
-			[]sdf.SDF3{switchHole, switchFlatzone, keyCapClearance, sdf.Intersect3D(hollow, lane), sdf.Intersect3D(topClearingCylinder, lane), allInsertHoldersHoles}, //hole rank 0
-			[]sdf.SDF3{sdf.Intersect3D(plate, lane), huggingCylinder, allInsertHolders},                                                                               //solid rank 0
-			[]sdf.SDF3{hollow, shellBottom}, //hole rank 1
-			[]sdf.SDF3{shellTop},            //solid rank 1
+			[]sdf.SDF3{switchHole, switchFlatzone, keyCapClearance, sdf.Intersect3D(topClearingCylinder, lane), allInsertHoldersHoles},
+			[]sdf.SDF3{allInsertHolders},
+			[]sdf.SDF3{sdf.Intersect3D(hollow, lane)},                 //hole rank 0
+			[]sdf.SDF3{sdf.Intersect3D(plate, lane), huggingCylinder}, //solid rank 0
+			[]sdf.SDF3{hollow, shellBottom},                           //hole rank 1
+			[]sdf.SDF3{shellTop},                                      //solid rank 1
 		),
 		Bottom: MakeNodule(
 			[]sdf.SDF3{switchHole, switchFlatzone, bottomClearingCylinder, allScrewHoles}, //hole rank 0

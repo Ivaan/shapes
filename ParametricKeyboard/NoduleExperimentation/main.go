@@ -36,17 +36,18 @@ func main() {
 	}
 
 	cols := []Column{
-		// { //H
-		// 	offset:       sdf.V3{X: -19.1},
-		// 	splayAngle:   0,
-		// 	convexAngle:  0,
-		// 	numberOfKeys: 4,
-		// 	startAngle:   -20,
-		// 	startRadius:  60,
-		// 	endAngle:     75,
-		// 	endRadius:    85,
-		// 	keySpacing:   19.1,
-		// },
+		{ //H
+			offset:       sdf.V3{X: -19.1},
+			splayAngle:   0,
+			convexAngle:  0,
+			numberOfKeys: 4,
+			startAngle:   -20,
+			startRadius:  60,
+			endAngle:     75,
+			endRadius:    85,
+			keySpacing:   19.1,
+			columnType:   LeftColumn,
+		},
 		{ //J
 			offset:       sdf.V3{},
 			splayAngle:   0,
@@ -57,6 +58,7 @@ func main() {
 			endAngle:     75,
 			endRadius:    85,
 			keySpacing:   19.1,
+			columnType:   MiddleColumn,
 		},
 		{ //K
 			offset:       sdf.V3{X: 23},
@@ -68,6 +70,7 @@ func main() {
 			endAngle:     75,
 			endRadius:    95,
 			keySpacing:   19.1,
+			columnType:   RightColumn,
 		},
 		// { //L
 		// 	offset:       sdf.V3{X: 42},
@@ -125,7 +128,7 @@ func main() {
 
 	// }
 
-	points := make([]sdf.M44, 0)
+	points := make([]NoduleTypeAndPoint, 0)
 	for _, col := range cols {
 		points = append(points, col.getKeyLocations()...)
 	}
@@ -133,10 +136,23 @@ func main() {
 	topNodules := make([]Nodule, len(points))
 	bottomNodules := make([]Nodule, len(points))
 
-	bubbleKey := knp.MakeBubbleKey()
+	// 0 1 2    1
+	// 3 4 5   2 0
+	// 6 7 8    3
+	bubbleKeys := make([]KeyNodule, 9)
+	bubbleKeys[0] = knp.MakeBubbleKey([]int{1, 2})
+	bubbleKeys[1] = knp.MakeBubbleKey([]int{1})
+	bubbleKeys[2] = knp.MakeBubbleKey([]int{0, 1})
+	bubbleKeys[3] = knp.MakeBubbleKey([]int{2})
+	bubbleKeys[4] = knp.MakeBubbleKey([]int{})
+	bubbleKeys[5] = knp.MakeBubbleKey([]int{0})
+	bubbleKeys[6] = knp.MakeBubbleKey([]int{2, 3})
+	bubbleKeys[7] = knp.MakeBubbleKey([]int{3})
+	bubbleKeys[8] = knp.MakeBubbleKey([]int{0, 3})
+
 	for i, p := range points {
-		topNodules[i] = bubbleKey.Top.OrientAndMove(p)
-		bottomNodules[i] = bubbleKey.Bottom.OrientAndMove(p)
+		topNodules[i] = bubbleKeys[p.noduleType].Top.OrientAndMove(p.moveTo)
+		bottomNodules[i] = bubbleKeys[p.noduleType].Bottom.OrientAndMove(p.moveTo)
 	}
 	top := NoduleCollection(topNodules).Combine()
 	back := NoduleCollection(bottomNodules).Combine()

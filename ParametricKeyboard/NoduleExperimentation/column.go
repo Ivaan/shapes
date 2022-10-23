@@ -17,23 +17,58 @@ type Column struct {
 	endAngle     float64
 	endRadius    float64
 	keySpacing   float64
+	columnType   ColumnType
 }
 
-func (col Column) getColumnNodule(makeBubbleKey func(sdf.M44) KeyNodule) ColumnNodule {
-	points := col.getKeyLocations()
-	nodes := make([]KeyNodule, len(points))
+type ColumnType int
 
-	for i, p := range points {
-		nodes[i] = makeBubbleKey(p)
-	}
-	return ColumnNodule{keys: nodes}
+const (
+	// left most column
+	LeftColumn ColumnType = iota
+	// middle column
+	MiddleColumn
+	// right most column
+	RightColumn
+)
+
+type NoduleTypeAndPoint struct {
+	moveTo     sdf.M44 //the transformation to move a nodule into position
+	noduleType int     //the nodule type (the grid of which screws/holes need to be there)
 }
 
-func (col Column) getKeyLocations() []sdf.M44 {
+// func (col Column) getColumnNodule(makeBubbleKey func(sdf.M44) KeyNodule) ColumnNodule {
+// 	points := col.getKeyLocations()
+// 	nodes := make([]KeyNodule, len(points))
+
+// 	for i, p := range points {
+// 		nodes[i] = makeBubbleKey(p)
+// 	}
+// 	return ColumnNodule{keys: nodes}
+// }
+
+// 0 1 2    0
+// 3 4 5   3 1
+// 6 7 8    2
+func (col Column) getKeyLocations() []NoduleTypeAndPoint {
 	points := spacedPointsOnAnArc(sdf.DtoR(col.startAngle), col.startRadius, sdf.DtoR(col.endAngle), col.endRadius, col.keySpacing, col.numberOfKeys)
-	places := make([]sdf.M44, len(points))
+	places := make([]NoduleTypeAndPoint, len(points))
+	var firstType, middleType, lastType int
+	switch col.columnType {
+	case LeftColumn:
+		firstType = 0
+		middleType = 3
+		lastType = 6
+	case MiddleColumn:
+		firstType = 1
+		middleType = 4
+		lastType = 7
+	case RightColumn:
+		firstType = 2
+		middleType = 5
+		lastType = 8
+	}
 	for i, p := range points {
-		places[i] = sdf.Translate3d(col.offset).Mul( //offset column per knucle possition
+		places[i].moveTo = sdf.Translate3d(col.offset).Mul( //offset column per knucle possition
 			sdf.RotateZ(sdf.DtoR(-col.splayAngle)), //rotate column for finger splay
 		).Mul(
 			sdf.RotateY(sdf.DtoR(col.convexAngle)), //rotate column for row convex curve
@@ -42,6 +77,13 @@ func (col Column) getKeyLocations() []sdf.M44 {
 		).Mul(
 			sdf.RotateX(p.angle), //rotate key into column sweap angle
 		)
+		if i == 0 {
+			places[i].noduleType = lastType
+		} else if i == len(points)-1 {
+			places[i].noduleType = firstType
+		} else {
+			places[i].noduleType = middleType
+		}
 	}
 	return places
 }
