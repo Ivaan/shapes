@@ -32,8 +32,9 @@ const (
 )
 
 type NoduleTypeAndPoint struct {
-	moveTo     sdf.M44 //the transformation to move a nodule into position
-	noduleType int     //the nodule type (the grid of which screws/holes need to be there)
+	moveTo sdf.M44 //the transformation to move a nodule into position
+	//noduleType int     //the nodule type - reserved for later use (probably key vs other kind of key vs encoder, maybe mpu ...)
+	screwPossitionsBits int64 //(the grid of which screws/holes need to be there)
 }
 
 // func (col Column) getColumnNodule(makeBubbleKey func(sdf.M44) KeyNodule) ColumnNodule {
@@ -49,23 +50,31 @@ type NoduleTypeAndPoint struct {
 // 0 1 2    0
 // 3 4 5   3 1
 // 6 7 8    2
+
+//  1    2
+// 2 0  4 1
+//  3    8
+// 06 02 03
+// 04 00 01
+// 12 08 09
+
 func (col Column) getKeyLocations() []NoduleTypeAndPoint {
 	points := spacedPointsOnAnArc(sdf.DtoR(col.startAngle), col.startRadius, sdf.DtoR(col.endAngle), col.endRadius, col.keySpacing, col.numberOfKeys)
 	places := make([]NoduleTypeAndPoint, len(points))
-	var firstType, middleType, lastType int
+	var firstType, middleType, lastType int64
 	switch col.columnType {
 	case LeftColumn:
-		firstType = 0
-		middleType = 3
-		lastType = 6
-	case MiddleColumn:
-		firstType = 1
+		firstType = 6
 		middleType = 4
-		lastType = 7
-	case RightColumn:
+		lastType = 12
+	case MiddleColumn:
 		firstType = 2
-		middleType = 5
+		middleType = 0
 		lastType = 8
+	case RightColumn:
+		firstType = 3
+		middleType = 1
+		lastType = 9
 	}
 	for i, p := range points {
 		places[i].moveTo = sdf.Translate3d(col.offset).Mul( //offset column per knucle possition
@@ -78,11 +87,11 @@ func (col Column) getKeyLocations() []NoduleTypeAndPoint {
 			sdf.RotateX(p.angle), //rotate key into column sweap angle
 		)
 		if i == 0 {
-			places[i].noduleType = lastType
+			places[i].screwPossitionsBits = lastType
 		} else if i == len(points)-1 {
-			places[i].noduleType = firstType
+			places[i].screwPossitionsBits = firstType
 		} else {
-			places[i].noduleType = middleType
+			places[i].screwPossitionsBits = middleType
 		}
 	}
 	return places

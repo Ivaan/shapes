@@ -136,23 +136,19 @@ func main() {
 	topNodules := make([]Nodule, len(points))
 	bottomNodules := make([]Nodule, len(points))
 
-	// 0 1 2    1
-	// 3 4 5   2 0
-	// 6 7 8    3
-	bubbleKeys := make([]KeyNodule, 9)
-	bubbleKeys[0] = knp.MakeBubbleKey([]int{1, 2})
-	bubbleKeys[1] = knp.MakeBubbleKey([]int{1})
-	bubbleKeys[2] = knp.MakeBubbleKey([]int{0, 1})
-	bubbleKeys[3] = knp.MakeBubbleKey([]int{2})
-	bubbleKeys[4] = knp.MakeBubbleKey([]int{})
-	bubbleKeys[5] = knp.MakeBubbleKey([]int{0})
-	bubbleKeys[6] = knp.MakeBubbleKey([]int{2, 3})
-	bubbleKeys[7] = knp.MakeBubbleKey([]int{3})
-	bubbleKeys[8] = knp.MakeBubbleKey([]int{0, 3})
+	bubbleKeys := make(map[int64]KeyNodule)
+	getBubbleKey := func(screwPossitionsBits int64) KeyNodule {
+		k, ok := bubbleKeys[screwPossitionsBits]
+		if !ok {
+			k = knp.MakeBubbleKey(screwPossitionsBits)
+			bubbleKeys[screwPossitionsBits] = k
+		}
+		return k
+	}
 
 	for i, p := range points {
-		topNodules[i] = bubbleKeys[p.noduleType].Top.OrientAndMove(p.moveTo)
-		bottomNodules[i] = bubbleKeys[p.noduleType].Bottom.OrientAndMove(p.moveTo)
+		topNodules[i] = getBubbleKey(p.screwPossitionsBits).Top.OrientAndMove(p.moveTo)
+		bottomNodules[i] = getBubbleKey(p.screwPossitionsBits).Bottom.OrientAndMove(p.moveTo)
 	}
 	top := NoduleCollection(topNodules).Combine()
 	back := NoduleCollection(bottomNodules).Combine()

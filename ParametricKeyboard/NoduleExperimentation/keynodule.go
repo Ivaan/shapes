@@ -46,7 +46,7 @@ type BubbleKeyNoduleProperties struct {
 	screwHeadDiameter                float64
 }
 
-func (knp BubbleKeyNoduleProperties) MakeBubbleKey(screwPossitions []int) KeyNodule {
+func (knp BubbleKeyNoduleProperties) MakeBubbleKey(screwPossitionsBits int64) KeyNodule {
 	sphereCenterZ := -knp.plateTopAtRadius - knp.keycapBottomHeightAbovePlateUp
 	topOfPlateZ := -knp.keycapBottomHeightAbovePlateUp
 	bottomOfPlateZ := topOfPlateZ - knp.plateThickness
@@ -118,14 +118,17 @@ func (knp BubbleKeyNoduleProperties) MakeBubbleKey(screwPossitions []int) KeyNod
 	shellBottom := sdf.Cut3D(solidSphere, coverCutA, coverBottomtV)
 	plate := sdf.Cut3D(solidSphere, plateCut, coverTopV)
 
-	numberOfScrews := 4
+	numberOfScrews := 4 //max 64 cuz screwPossitionsBits is int64
 	insertHolders := make([]sdf.SDF3, numberOfScrews)
 	screwChannels := make([]sdf.SDF3, numberOfScrews)
 	screwHoles := make([]sdf.SDF3, numberOfScrews)
 	insertHoldersHoles := make([]sdf.SDF3, numberOfScrews)
 
-	for p := 0; p < len(screwPossitions); p++ {
-		i := screwPossitions[p]
+	for i := 0; i < numberOfScrews; i++ {
+		if screwPossitionsBits&(1<<i) == 0 {
+			continue
+		}
+
 		angle := float64(i) * sdf.Tau / float64(numberOfScrews)
 		rotateIntoPlace := sdf.RotateZ(angle).Mul(sdf.Translate3d(sdf.V3{X: screwRadiusFromCenter}))
 
@@ -165,7 +168,7 @@ func (knp BubbleKeyNoduleProperties) MakeBubbleKey(screwPossitions []int) KeyNod
 	}
 
 	var allInsertHolders, allInsertHoldersHoles, allScrewChannels, allScrewHoles sdf.SDF3
-	if len(screwPossitions) > 0 {
+	if screwPossitionsBits > 0 {
 		allInsertHolders = sdf.Union3D(insertHolders...)
 		allInsertHoldersHoles = sdf.Union3D(insertHoldersHoles...)
 		allScrewChannels = sdf.Union3D(screwChannels...)
