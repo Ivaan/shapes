@@ -1,13 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"math"
 
 	"github.com/deadsy/sdfx/sdf"
 )
 
-type Column struct {
+type Column struct { // a column of keys for a single finger
 	offset       sdf.V3
 	splayAngle   float64
 	convexAngle  float64
@@ -31,25 +30,50 @@ const (
 	RightColumn
 )
 
-type NoduleTypeAndPoint struct {
-	moveTo sdf.M44 //the transformation to move a nodule into position
-	//noduleType int     //the nodule type - reserved for later use (probably key vs other kind of key vs encoder, maybe mpu ...)
-	screwPossitionsBits int64 //(the grid of which screws/holes need to be there)
+type ConeRow struct { //a row of keys in the thumb cluster deffined as a path along a cone (the code described by the movement of the thumb where the end of the thumb closest to the wrist is the point of the cone)
+	offsetToPoint sdf.V3
+	centerLine    sdf.V3 //vector down the middle of this cone
+	//distance float64 //from the point to the center of the keys (height from the cone perspective)
+	//radius float64 //from the centerLine out to the keys
+	//and angle somehow ...
+	//or maybe we just define
+	firstKeyLocation sdf.V3 //and compute radius and distance from that
+	numberOfKeys     int
+	keySpacing       float64
+	rowType          RowType
 }
 
-// func (col Column) getColumnNodule(makeBubbleKey func(sdf.M44) KeyNodule) ColumnNodule {
-// 	points := col.getKeyLocations()
-// 	nodes := make([]KeyNodule, len(points))
+type RowType int
 
-// 	for i, p := range points {
-// 		nodes[i] = makeBubbleKey(p)
-// 	}
-// 	return ColumnNodule{keys: nodes}
-// }
+const (
+	//top most row
+	TopRow RowType = iota
+	//middle row
+	MiddleRow
+	//bottom most row
+	BottomRow
+	//only row (topmost and bottommost)
+	OnlyRow
+)
 
-// 0 1 2    0
-// 3 4 5   3 1
-// 6 7 8    2
+type NoduleType int
+
+const (
+	NoduleKey NoduleType = iota
+	NoduleDebug1
+	NoduleDebug2
+	NoduleDebug3
+)
+
+type NoduleTypeAndPoint struct {
+	moveTo              sdf.M44    //the transformation to move a nodule into position
+	noduleType          NoduleType //the nodule type - reserved for later use (probably key vs other kind of key vs encoder, maybe mpu ...)
+	screwPossitionsBits int64      //(the grid of which screws/holes need to be there)
+}
+
+type NoduleSource interface {
+	getKeyLocations() []NoduleTypeAndPoint
+}
 
 //  1    2
 // 2 0  4 1
@@ -93,6 +117,7 @@ func (col Column) getKeyLocations() []NoduleTypeAndPoint {
 		} else {
 			places[i].screwPossitionsBits = middleType
 		}
+		places[i].noduleType = NoduleKey
 	}
 	return places
 }
@@ -163,10 +188,83 @@ func spacedPointsOnAnArc(startAngle, startRadius, endAngle, endRadius, distanceT
 		angleAdjust := math.Atan2(rise, run)
 		a := arpd.angle - angleAdjust
 		points[i] = locationWithAngle{location: arpd.point, angle: a}
-		fmt.Println(arpd.point, a)
+		//fmt.Println(arpd.point, a)
 		previousArpd = arpd
 	}
 	return points
+}
+
+func (con ConeRow) getKeyLocations() []NoduleTypeAndPoint {
+	/*
+		offsetToPoint sdf.V3
+		centerLine    sdf.V3 //vector down the middle of this cone
+		//distance float64 //from the point to the center of the keys (height from the cone perspective)
+		//radius float64 //from the centerLine out to the keys
+		//and angle somehow ...
+		//or maybe we just define
+		firstKeyLocation sdf.V3 //and compute radius and distance from that
+		rowType          RowType
+		numberOfKeys     int
+		keySpacing       float64
+
+	*/
+
+	toOrigin := sdf.Translate3d(con.offsetToPoint.Neg()) //translate offsetpoint to origin
+	//fmt.Println("rotateToXZPlane:", sdf.RtoD(-math.Atan2(con.centerLine.Y, con.centerLine.X)))
+	rotateToXZPlane := sdf.RotateZ(-math.Atan2(con.centerLine.Y, con.centerLine.X))     //rotate cone centerline about Z axis to XZ plane (i.e. the Y = zero plane)
+	rotatedCenterLine := rotateToXZPlane.MulPosition(con.centerLine)                    //centerline after rotation to XZ plane
+	rotateToZAxis := sdf.RotateY(-math.Atan2(rotatedCenterLine.X, rotatedCenterLine.Z)) //rotate cone centerline about Y axis to Z axis (i.e. the now X also = zero)
+
+	movedFirstKeyLocation := rotateToZAxis.Mul(rotateToXZPlane).Mul(toOrigin).MulPosition(con.firstKeyLocation) //location of the first key relative to the cone center vector after being moved to the Z axis
+	rotateFirstKeyToX := sdf.RotateZ(-math.Atan2(movedFirstKeyLocation.Y, movedFirstKeyLocation.X))             //rotate the moved First Key to the XZ plane
+	firstKeyOnXZ := rotateFirstKeyToX.MulPosition(movedFirstKeyLocation)                                        //first key rotated to X axis relative to cone on Z axis
+
+	rotateKeyToZ := sdf.RotateY(-sdf.Tau / 4).Mul(sdf.RotateZ(-sdf.Tau / 4)) //rotates a key facing up along Y axis so as to face it's bottom along X (to the inner surface of cone we're aligning things to)
+	moveUpCone := sdf.Translate3d(sdf.V3{Z: firstKeyOnXZ.Length()})
+	leanKeyOut := sdf.RotateY(math.Atan2(firstKeyOnXZ.X, firstKeyOnXZ.Z)) //rotation to lean a key on Z axis out to inner surface of cone at first key location
+
+	rotateAnglePerKey := math.Atan2(con.keySpacing, firstKeyOnXZ.X) //if the keys are on the surface of a cone at a certain height, then the first key Z is that height, and the first key X is the distance from the center. The keys will describe a circle at radius X.
+
+	putTheConeBack := toOrigin.Inverse().Mul(rotateToXZPlane.Inverse()).Mul(rotateToZAxis.Inverse().Mul(rotateFirstKeyToX.Inverse())) //reverse the transformation that brought the cone centerline to the Z axis
+
+	points := make([]NoduleTypeAndPoint, con.numberOfKeys)
+
+	for i := 0; i < con.numberOfKeys; i++ {
+		points[i] = NoduleTypeAndPoint{
+			moveTo:              putTheConeBack.Mul(sdf.RotateZ(float64(i) * rotateAnglePerKey)).Mul(leanKeyOut).Mul(moveUpCone).Mul(rotateKeyToZ),
+			screwPossitionsBits: 10,
+			noduleType:          NoduleKey,
+		}
+	}
+
+	// points = append(points,
+	// 	NoduleTypeAndPoint{
+	// 		moveTo:     sdf.Translate3d(con.offsetToPoint),
+	// 		noduleType: NoduleDebug1,
+	// 	},
+	// 	NoduleTypeAndPoint{
+	// 		moveTo:     sdf.Translate3d(con.offsetToPoint.Add(con.centerLine)),
+	// 		noduleType: NoduleDebug2,
+	// 	},
+	// 	NoduleTypeAndPoint{
+	// 		moveTo:     sdf.Translate3d(con.firstKeyLocation),
+	// 		noduleType: NoduleDebug2,
+	// 	},
+	// 	// NoduleTypeAndPoint{
+	// 	// 	moveTo:     sdf.Identity3d(),
+	// 	// 	noduleType: NoduleDebug1,
+	// 	// },
+	// 	// NoduleTypeAndPoint{
+	// 	// 	moveTo:     sdf.Translate3d(movedFirstKeyLocation),
+	// 	// 	noduleType: NoduleDebug2,
+	// 	// },
+	// 	// NoduleTypeAndPoint{
+	// 	// 	moveTo:     sdf.Translate3d(firstKeyOnXZ),
+	// 	// 	noduleType: NoduleDebug3,
+	// 	// },
+	// )
+	return points
+
 }
 
 type angleRadiusPointDistance struct {
@@ -183,38 +281,4 @@ type locationWithAngle struct {
 
 type ColumnNodule struct {
 	keys []KeyNodule
-}
-
-// func (cn ColumnNodule) GetTops() []sdf.SDF3 {
-// 	return []sdf.SDF3{
-// 		sdf.Difference3D(
-// 			sdf.Union3D(AccumulateSDF3FromKeyNodule(cn.keys, func(kn KeyNodule) []sdf.SDF3 { return kn.tops })...),
-// 			sdf.Union3D(AccumulateSDF3FromKeyNodule(cn.keys, func(kn KeyNodule) []sdf.SDF3 { return kn.topColumnHoles })...),
-// 		),
-// 	}
-// }
-// func (cn ColumnNodule) GetTopHoles() []sdf.SDF3 {
-// 	return AccumulateSDF3FromKeyNodule(cn.keys, func(kn KeyNodule) []sdf.SDF3 { return kn.topHoles })
-// }
-// func (cn ColumnNodule) GetBacks() []sdf.SDF3 {
-// 	return AccumulateSDF3FromKeyNodule(cn.keys, func(kn KeyNodule) []sdf.SDF3 { return kn.backs })
-// }
-// func (cn ColumnNodule) GetBackHoles() []sdf.SDF3 {
-// 	return AccumulateSDF3FromKeyNodule(cn.keys, func(kn KeyNodule) []sdf.SDF3 { return kn.backHoles })
-// }
-// func (cn ColumnNodule) GetHitBoxes() []sdf.SDF3 {
-// 	return AccumulateSDF3FromKeyNodule(cn.keys, func(kn KeyNodule) []sdf.SDF3 { return kn.GetHitBoxes() })
-// }
-
-func AccumulateSDF3FromKeyNodule(kns []KeyNodule, getSDF3s func(KeyNodule) []sdf.SDF3) []sdf.SDF3 {
-	totalLength := 0
-	for _, kn := range kns {
-		totalLength += len(getSDF3s(kn))
-	}
-	sdfs := make([]sdf.SDF3, totalLength)
-	var i int
-	for _, kn := range kns {
-		i += copy(sdfs[i:], getSDF3s(kn))
-	}
-	return sdfs
 }

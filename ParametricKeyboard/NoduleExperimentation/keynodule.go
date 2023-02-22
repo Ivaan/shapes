@@ -176,6 +176,8 @@ func (knp BubbleKeyNoduleProperties) MakeBubbleKey(screwPossitionsBits int64) Ke
 	}
 	return KeyNodule{
 		Top: MakeNodule(
+			[]sdf.SDF3{},
+			[]sdf.SDF3{},
 			[]sdf.SDF3{switchHole, switchFlatzone, keyCapClearance, sdf.Intersect3D(topClearingCylinder, lane), allInsertHoldersHoles},
 			[]sdf.SDF3{allInsertHolders},
 			[]sdf.SDF3{sdf.Intersect3D(hollow, lane)},                 //hole rank 0
@@ -184,6 +186,8 @@ func (knp BubbleKeyNoduleProperties) MakeBubbleKey(screwPossitionsBits int64) Ke
 			[]sdf.SDF3{shellTop},                                      //solid rank 1
 		),
 		Bottom: MakeNodule(
+			[]sdf.SDF3{},
+			[]sdf.SDF3{},
 			[]sdf.SDF3{switchHole, switchFlatzone, bottomClearingCylinder, allScrewHoles}, //hole rank 0
 			[]sdf.SDF3{allScrewChannels}, //solid rank 0
 			[]sdf.SDF3{hollow},           //hole rank 0

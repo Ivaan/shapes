@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/deadsy/sdfx/render"
 	"github.com/deadsy/sdfx/sdf"
 )
@@ -35,8 +37,8 @@ func main() {
 		screwHeadDiameter:                3.8,
 	}
 
-	cols := []Column{
-		{ //H
+	cols := []NoduleSource{
+		Column{ //H
 			offset:       sdf.V3{X: -19.1},
 			splayAngle:   0,
 			convexAngle:  0,
@@ -45,10 +47,10 @@ func main() {
 			startRadius:  60,
 			endAngle:     75,
 			endRadius:    85,
-			keySpacing:   19.1,
+			keySpacing:   19.4,
 			columnType:   LeftColumn,
 		},
-		{ //J
+		Column{ //J
 			offset:       sdf.V3{},
 			splayAngle:   0,
 			convexAngle:  0,
@@ -57,33 +59,73 @@ func main() {
 			startRadius:  60,
 			endAngle:     75,
 			endRadius:    85,
-			keySpacing:   19.1,
+			keySpacing:   19.4,
 			columnType:   MiddleColumn,
 		},
-		{ //K
+		Column{ //K
 			offset:       sdf.V3{X: 23},
 			splayAngle:   5,
-			convexAngle:  0,
+			convexAngle:  1,
 			numberOfKeys: 4,
 			startAngle:   -20,
 			startRadius:  65,
 			endAngle:     75,
 			endRadius:    95,
-			keySpacing:   19.1,
-			columnType:   RightColumn,
+			keySpacing:   19.4,
+			columnType:   MiddleColumn,
 		},
-		// { //L
-		// 	offset:       sdf.V3{X: 42},
-		// 	splayAngle:   10,
-		// 	convexAngle:  0,
+		Column{ //L
+			offset:       sdf.V3{X: 47},
+			splayAngle:   10,
+			convexAngle:  2,
+			numberOfKeys: 4,
+			startAngle:   -20,
+			startRadius:  62.5,
+			endAngle:     75,
+			endRadius:    90,
+			keySpacing:   19.4,
+			columnType:   MiddleColumn,
+		},
+		Column{ //;
+			offset:       sdf.V3{X: 77, Y: -4},
+			splayAngle:   25,
+			convexAngle:  3,
+			numberOfKeys: 4,
+			startAngle:   -20,
+			startRadius:  55,
+			endAngle:     75,
+			endRadius:    70,
+			keySpacing:   19.4,
+			columnType:   MiddleColumn,
+		},
+		// Column{ //'
+		// 	offset:       sdf.V3{X: 95.10131447425714, Y: 4.440781562018028, Z: -1.0467191248588767},
+		// 	splayAngle:   25,
+		// 	convexAngle:  3,
 		// 	numberOfKeys: 4,
 		// 	startAngle:   -20,
-		// 	startRadius:  62.5,
+		// 	startRadius:  55,
 		// 	endAngle:     75,
-		// 	endRadius:    90,
-		// 	keySpacing:   19.1,
+		// 	endRadius:    70,
+		// 	keySpacing:   19.4,
+		// 	columnType:   RightColumn,
 		// },
+		ConeRow{
+			offsetToPoint:    sdf.V3{X: -20, Y: -132, Z: -24},
+			centerLine:       sdf.V3{X: -45, Y: 92, Z: 5},
+			firstKeyLocation: sdf.V3{X: -35, Y: -60, Z: -45},
+			rowType:          OnlyRow,
+			numberOfKeys:     3,
+			keySpacing:       22,
+		},
 	}
+
+	a := sdf.V3{X: 77, Y: -4}
+	b := sdf.V3{X: 97, Y: -4}
+	c := b.Sub(a)
+	d := sdf.RotateZ(sdf.DtoR(25)).Mul(sdf.RotateY(sdf.DtoR(3))).MulPosition(c)
+
+	fmt.Println(a.Add(d))
 
 	// //dual key
 	// cols = []Column{
@@ -147,17 +189,64 @@ func main() {
 	}
 
 	for i, p := range points {
-		topNodules[i] = getBubbleKey(p.screwPossitionsBits).Top.OrientAndMove(p.moveTo)
-		bottomNodules[i] = getBubbleKey(p.screwPossitionsBits).Bottom.OrientAndMove(p.moveTo)
+		if p.noduleType == NoduleKey {
+			topNodules[i] = getBubbleKey(p.screwPossitionsBits).Top.OrientAndMove(p.moveTo)
+			bottomNodules[i] = getBubbleKey(p.screwPossitionsBits).Bottom.OrientAndMove(p.moveTo)
+		} else if p.noduleType == NoduleDebug1 {
+			topNodules[i] = MakeNoduleDebug1().OrientAndMove(p.moveTo)
+			bottomNodules[i] = MakeNoduleDebug1().OrientAndMove(p.moveTo)
+		} else if p.noduleType == NoduleDebug2 {
+			topNodules[i] = MakeNoduleDebug2().OrientAndMove(p.moveTo)
+			bottomNodules[i] = MakeNoduleDebug2().OrientAndMove(p.moveTo)
+
+		} else if p.noduleType == NoduleDebug3 {
+			topNodules[i] = MakeNoduleDebug3().OrientAndMove(p.moveTo)
+			bottomNodules[i] = MakeNoduleDebug3().OrientAndMove(p.moveTo)
+		}
 	}
 	top := NoduleCollection(topNodules).Combine()
-	back := NoduleCollection(bottomNodules).Combine()
+	back := sdf.Difference3D(NoduleCollection(bottomNodules).Combine(), top)
 
+	// s1, _ := sdf.Sphere3D(2)
+	// s2, _ := sdf.Sphere3D(5)
+	// c, _ := sdf.Cylinder3D(5, 5, 0)
+	// r := cols[len(cols)-1].(ConeRow)
+
+	// topDebug := make([]sdf.SDF3, 0)
+	// topDebug = append(topDebug,
+	// 	top,
+	// 	sdf.Transform3D(s1, sdf.Translate3d(r.offsetToPoint)),
+	// 	sdf.Transform3D(s2, sdf.Translate3d(r.offsetToPoint.Add(r.centerLine))),
+	// 	sdf.Transform3D(c, sdf.Translate3d(r.firstKeyLocation)),
+	// )
+
+	// _, debugLocations := r.getKeyLocationsWithExtras()
+
+	// for _, v := range debugLocations {
+	// 	topDebug = append(topDebug, sdf.Transform3D(s1, sdf.Translate3d(v)))
+	// }
+
+	// topPlus := sdf.Union3D(topDebug...)
+	_ = top
+	_ = back
 	//render.RenderSTLSlow(sdf.Intersect3D(top, back), 300, "overlap.stl")
 	// render.RenderSTLSlow(top, 350, "top.stl")
 	// render.RenderSTLSlow(back, 300, "back.stl")
+
 	render.RenderSTL(top, 350, "top.stl")
 	render.RenderSTL(back, 300, "back.stl")
+
+	//testing RowCones
+	// row := ConeRow{
+	// 	offsetToPoint:    sdf.V3{X: -20, Y: -40, Z: -14},
+	// 	centerLine:       sdf.V3{X: -5, Y: 15, Z: 5},
+	// 	firstKeyLocation: sdf.V3{X: -20, Y: 15, Z: -25},
+	// 	rowType:          OnlyRow,
+	// 	numberOfKeys:     4,
+	// 	keySpacing:       20,
+	// }
+
+	// render.RenderSTL(row.getKeyLocations(), 300, "testCone.stl")
 
 }
 
