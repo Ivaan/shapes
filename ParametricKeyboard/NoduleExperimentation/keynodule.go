@@ -46,6 +46,8 @@ type BubbleKeyNoduleProperties struct {
 	screwHeadDiameter                float64
 }
 
+var screwGrow = 0.0
+
 func (knp BubbleKeyNoduleProperties) MakeBubbleKey(screwPossitionsBits int64) KeyNodule {
 	sphereCenterZ := -knp.plateTopAtRadius - knp.keycapBottomHeightAbovePlateUp
 	topOfPlateZ := -knp.keycapBottomHeightAbovePlateUp
@@ -132,11 +134,11 @@ func (knp BubbleKeyNoduleProperties) MakeBubbleKey(screwPossitionsBits int64) Ke
 		angle := float64(i) * sdf.Tau / float64(numberOfScrews)
 		rotateIntoPlace := sdf.RotateZ(angle).Mul(sdf.Translate3d(sdf.V3{X: screwRadiusFromCenter}))
 
-		holder, err := Cylinder3DAbove(knp.insertLength+knp.insertWallThickness, knp.insertDiameter/2+knp.insertWallThickness, 0, backCoverCutZ)
+		holder, err := Cylinder3DAbove(knp.insertLength+knp.insertWallThickness, knp.insertDiameter/2+knp.insertWallThickness+screwGrow, 0, backCoverCutZ)
 		if err != nil {
 			panic(err)
 		}
-		holderHole, err := Cylinder3DAbove(knp.insertLength, knp.insertDiameter/2, 0, backCoverCutZ)
+		holderHole, err := Cylinder3DAbove(knp.insertLength, knp.insertDiameter/2+screwGrow, 0, backCoverCutZ)
 		if err != nil {
 			panic(err)
 		}
@@ -145,15 +147,15 @@ func (knp BubbleKeyNoduleProperties) MakeBubbleKey(screwPossitionsBits int64) Ke
 		insertHolders[i] = holder
 		insertHoldersHoles[i] = holderHole
 
-		screwChannel, err := Cylinder3DBelow(knp.sphereRadius, knp.screwHeadDiameter/2+knp.insertWallThickness, 0, backCoverCutZ)
+		screwChannel, err := Cylinder3DBelow(knp.sphereRadius, knp.screwHeadDiameter/2+knp.insertWallThickness+screwGrow, 0, backCoverCutZ)
 		if err != nil {
 			panic(err)
 		}
-		screwThreadHole, err := Cylinder3DBelow(knp.screwThreadLength-knp.insertLength, knp.screwThreadDiameter/2, 0, backCoverCutZ)
+		screwThreadHole, err := Cylinder3DBelow(knp.screwThreadLength-knp.insertLength, knp.screwThreadDiameter/2+screwGrow, 0, backCoverCutZ)
 		if err != nil {
 			panic(err)
 		}
-		screwHeadHole, err := Cylinder3DBelow(knp.sphereRadius, knp.screwHeadDiameter/2, 0, backCoverCutZ-(knp.screwThreadLength-knp.insertLength))
+		screwHeadHole, err := Cylinder3DBelow(knp.sphereRadius, knp.screwHeadDiameter/2+screwGrow, 0, backCoverCutZ-(knp.screwThreadLength-knp.insertLength))
 		if err != nil {
 			panic(err)
 		}
@@ -165,6 +167,7 @@ func (knp BubbleKeyNoduleProperties) MakeBubbleKey(screwPossitionsBits int64) Ke
 		screwHole := sdf.Union3D(screwThreadHole, screwHeadHole)
 		screwChannels[i] = screwChannel
 		screwHoles[i] = screwHole
+		screwGrow += 0.2
 	}
 
 	var allInsertHolders, allInsertHoldersHoles, allScrewChannels, allScrewHoles sdf.SDF3
@@ -174,6 +177,7 @@ func (knp BubbleKeyNoduleProperties) MakeBubbleKey(screwPossitionsBits int64) Ke
 		allScrewChannels = sdf.Union3D(screwChannels...)
 		allScrewHoles = sdf.Union3D(screwHoles...)
 	}
+
 	return KeyNodule{
 		Top: MakeNodule(
 			[]sdf.SDF3{},

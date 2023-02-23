@@ -38,94 +38,94 @@ func main() {
 	}
 
 	cols := []NoduleSource{
-		Column{ //H
-			offset:       sdf.V3{X: -19.1},
-			splayAngle:   0,
-			convexAngle:  0,
-			numberOfKeys: 4,
-			startAngle:   -20,
-			startRadius:  60,
-			endAngle:     75,
-			endRadius:    85,
-			keySpacing:   19.4,
-			columnType:   LeftColumn,
-		},
-		Column{ //J
-			offset:       sdf.V3{},
-			splayAngle:   0,
-			convexAngle:  0,
-			numberOfKeys: 4,
-			startAngle:   -20,
-			startRadius:  60,
-			endAngle:     75,
-			endRadius:    85,
-			keySpacing:   19.4,
-			columnType:   MiddleColumn,
-		},
-		Column{ //K
-			offset:       sdf.V3{X: 23},
-			splayAngle:   5,
-			convexAngle:  1,
-			numberOfKeys: 4,
-			startAngle:   -20,
-			startRadius:  65,
-			endAngle:     75,
-			endRadius:    95,
-			keySpacing:   19.4,
-			columnType:   MiddleColumn,
-		},
-		Column{ //L
-			offset:       sdf.V3{X: 47},
-			splayAngle:   10,
-			convexAngle:  2,
-			numberOfKeys: 4,
-			startAngle:   -20,
-			startRadius:  62.5,
-			endAngle:     75,
-			endRadius:    90,
-			keySpacing:   19.4,
-			columnType:   MiddleColumn,
-		},
-		Column{ //;
-			offset:       sdf.V3{X: 77, Y: -4},
-			splayAngle:   25,
-			convexAngle:  3,
-			numberOfKeys: 4,
-			startAngle:   -20,
-			startRadius:  55,
-			endAngle:     75,
-			endRadius:    70,
-			keySpacing:   19.4,
-			columnType:   MiddleColumn,
-		},
-		// Column{ //'
-		// 	offset:       sdf.V3{X: 95.10131447425714, Y: 4.440781562018028, Z: -1.0467191248588767},
-		// 	splayAngle:   25,
-		// 	convexAngle:  3,
-		// 	numberOfKeys: 4,
-		// 	startAngle:   -20,
-		// 	startRadius:  55,
-		// 	endAngle:     75,
-		// 	endRadius:    70,
-		// 	keySpacing:   19.4,
-		// 	columnType:   RightColumn,
-		// },
+		/*	Column{ //H
+				offset:       sdf.V3{X: -19.1},
+				splayAngle:   0,
+				convexAngle:  0,
+				numberOfKeys: 3,
+				startAngle:   -20,
+				startRadius:  60,
+				endAngle:     75,
+				endRadius:    85,
+				keySpacing:   19.4,
+				columnType:   LeftColumn,
+			},
+			Column{ //J
+				offset:       sdf.V3{},
+				splayAngle:   0,
+				convexAngle:  0,
+				numberOfKeys: 3,
+				startAngle:   -20,
+				startRadius:  60,
+				endAngle:     75,
+				endRadius:    85,
+				keySpacing:   19.4,
+				columnType:   MiddleColumn,
+			},
+			Column{ //K
+				offset:       sdf.V3{X: 23},
+				splayAngle:   5,
+				convexAngle:  .5,
+				numberOfKeys: 3,
+				startAngle:   -20,
+				startRadius:  65,
+				endAngle:     75,
+				endRadius:    95,
+				keySpacing:   19.4,
+				columnType:   MiddleColumn,
+			},
+			Column{ //L
+				offset:       sdf.V3{X: 47},
+				splayAngle:   10,
+				convexAngle:  1,
+				numberOfKeys: 3,
+				startAngle:   -20,
+				startRadius:  62.5,
+				endAngle:     75,
+				endRadius:    90,
+				keySpacing:   19.4,
+				columnType:   MiddleColumn,
+			},
+			Column{ //;
+				offset:       sdf.V3{X: 77, Y: -4},
+				splayAngle:   25,
+				convexAngle:  3,
+				numberOfKeys: 3,
+				startAngle:   -20,
+				startRadius:  55,
+				endAngle:     75,
+				endRadius:    70,
+				keySpacing:   19.4,
+				columnType:   MiddleColumn,
+			},
+			// Column{ //'
+			// 	offset:       sdf.V3{X: 94.28675532291557, Y: -12.060946391727217, Z: -0.9996167642402273},
+			// 	splayAngle:   25,
+			// 	convexAngle:  3,
+			// 	numberOfKeys: 4,
+			// 	startAngle:   -20,
+			// 	startRadius:  55,
+			// 	endAngle:     75,
+			// 	endRadius:    70,
+			// 	keySpacing:   19.4,
+			// 	columnType:   RightColumn,
+			// },
+		*/
 		ConeRow{
 			offsetToPoint:    sdf.V3{X: -20, Y: -132, Z: -24},
 			centerLine:       sdf.V3{X: -45, Y: 92, Z: 5},
-			firstKeyLocation: sdf.V3{X: -35, Y: -60, Z: -45},
+			firstKeyLocation: sdf.V3{X: -25, Y: -58, Z: -45},
 			rowType:          OnlyRow,
-			numberOfKeys:     3,
-			keySpacing:       22,
+			numberOfKeys:     2,
+			keySpacing:       24,
 		},
 	}
 
-	a := sdf.V3{X: 77, Y: -4}
-	b := sdf.V3{X: 97, Y: -4}
-	c := b.Sub(a)
-	d := sdf.RotateZ(sdf.DtoR(25)).Mul(sdf.RotateY(sdf.DtoR(3))).MulPosition(c)
+	a := sdf.V3{X: 19.1}
+	a = sdf.RotateZ(sdf.DtoR(-25)).Mul(sdf.RotateY(sdf.DtoR(3))).MulPosition(a)
+	b := sdf.V3{X: 77, Y: -4}
 
-	fmt.Println(a.Add(d))
+	fmt.Println(b.Add(a))
 
 	// //dual key
 	// cols = []Column{
@@ -233,8 +233,10 @@ func main() {
 	// render.RenderSTLSlow(top, 350, "top.stl")
 	// render.RenderSTLSlow(back, 300, "back.stl")
 
-	render.RenderSTL(top, 350, "top.stl")
-	render.RenderSTL(back, 300, "back.stl")
+	// render.RenderSTL(top, 350, "3x5plus2top.stl")
+	// render.RenderSTL(back, 300, "3x5plus2back.stl")
+	render.RenderSTL(top, 350, "JustThumbstop.stl")
+	render.RenderSTL(back, 300, "JustThumbsback.stl")
 
 	//testing RowCones
 	// row := ConeRow{

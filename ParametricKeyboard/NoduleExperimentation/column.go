@@ -227,13 +227,41 @@ func (con ConeRow) getKeyLocations() []NoduleTypeAndPoint {
 
 	putTheConeBack := toOrigin.Inverse().Mul(rotateToXZPlane.Inverse()).Mul(rotateToZAxis.Inverse().Mul(rotateFirstKeyToX.Inverse())) //reverse the transformation that brought the cone centerline to the Z axis
 
-	points := make([]NoduleTypeAndPoint, con.numberOfKeys)
-
+	places := make([]NoduleTypeAndPoint, con.numberOfKeys)
+	// 06 02 03
+	// 04 00 01
+	// 12 08 09
+	var firstType, middleType, lastType int64
+	switch con.rowType {
+	case TopRow:
+		firstType = 6
+		middleType = 2
+		lastType = 3
+	case MiddleRow:
+		firstType = 4
+		middleType = 0
+		lastType = 1
+	case BottomRow:
+		firstType = 12
+		middleType = 8
+		lastType = 9
+	case OnlyRow:
+		firstType = 14
+		middleType = 10
+		lastType = 11
+	}
 	for i := 0; i < con.numberOfKeys; i++ {
-		points[i] = NoduleTypeAndPoint{
+		places[i] = NoduleTypeAndPoint{
 			moveTo:              putTheConeBack.Mul(sdf.RotateZ(float64(i) * rotateAnglePerKey)).Mul(leanKeyOut).Mul(moveUpCone).Mul(rotateKeyToZ),
-			screwPossitionsBits: 10,
+			screwPossitionsBits: 10, //TODO: compute screw possitions by rowType
 			noduleType:          NoduleKey,
+		}
+		if i == 0 {
+			places[i].screwPossitionsBits = lastType
+		} else if i == len(places)-1 {
+			places[i].screwPossitionsBits = firstType
+		} else {
+			places[i].screwPossitionsBits = middleType
 		}
 	}
 
@@ -263,7 +291,7 @@ func (con ConeRow) getKeyLocations() []NoduleTypeAndPoint {
 	// 	// 	noduleType: NoduleDebug3,
 	// 	// },
 	// )
-	return points
+	return places
 
 }
 
