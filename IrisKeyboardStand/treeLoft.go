@@ -4,11 +4,13 @@ import (
 	"math"
 
 	"github.com/deadsy/sdfx/sdf"
+	v2 "github.com/deadsy/sdfx/vec/v2"
+	v3 "github.com/deadsy/sdfx/vec/v3"
 )
 
 type treeLoftSDF3 struct {
 	sdfs   []sdf.SDF2
-	center sdf.V2
+	center v2.Vec
 	height float64
 	round  float64
 	min    sdf.MinFunc
@@ -16,7 +18,7 @@ type treeLoftSDF3 struct {
 	bb     sdf.Box3
 }
 
-func treeLoft3D(sdfs []sdf.SDF2, center sdf.V2, height, twist, round float64) sdf.SDF3 {
+func treeLoft3D(sdfs []sdf.SDF2, center v2.Vec, height, twist, round float64) sdf.SDF3 {
 	t := treeLoftSDF3{
 		sdfs:   sdfs,
 		center: center,
@@ -33,15 +35,15 @@ func treeLoft3D(sdfs []sdf.SDF2, center sdf.V2, height, twist, round float64) sd
 	for _, x := range t.sdfs {
 		bb = bb.Extend(x.BoundingBox()) // for now we presume center is withing the collective BB
 	}
-	t.bb = sdf.Box3{Min: sdf.V3{X: bb.Min.X, Y: bb.Min.Y, Z: -t.height}.SubScalar(round), Max: sdf.V3{X: bb.Max.X, Y: bb.Max.Y, Z: t.height}.AddScalar(round)}
+	t.bb = sdf.Box3{Min: v3.Vec{X: bb.Min.X, Y: bb.Min.Y, Z: -t.height}.SubScalar(round), Max: v3.Vec{X: bb.Max.X, Y: bb.Max.Y, Z: t.height}.AddScalar(round)}
 	return &t
 }
 
-func (t *treeLoftSDF3) Evaluate(p sdf.V3) float64 {
+func (t *treeLoftSDF3) Evaluate(p v3.Vec) float64 {
 	// work out the mix value as a function of height
 	k := sdf.Clamp((0.5*p.Z/t.height)+0.5, 0, 1)
 
-	pt := t.twist(p.Sub(sdf.V3{X: t.center.X, Y: t.center.Y, Z: p.Z})).Add(sdf.V2{X: t.center.X, Y: t.center.Y})
+	pt := t.twist(p.Sub(v3.Vec{X: t.center.X, Y: t.center.Y, Z: p.Z})).Add(v2.Vec{X: t.center.X, Y: t.center.Y})
 
 	var a float64
 	for i, sh := range t.sdfs {
@@ -83,7 +85,7 @@ func (t *treeLoftSDF3) BoundingBox() sdf.Box3 {
 	return t.bb
 }
 
-func (t *treeLoftSDF3) shiftPoint(p sdf.V2, bb sdf.Box2, k float64) sdf.V2 {
+func (t *treeLoftSDF3) shiftPoint(p v2.Vec, bb sdf.Box2, k float64) v2.Vec {
 	d := t.center.Sub(bb.Center())
-	return sdf.V2{X: p.X, Y: p.Y}.Sub(d.MulScalar(1 - k))
+	return v2.Vec{X: p.X, Y: p.Y}.Sub(d.MulScalar(1 - k))
 }

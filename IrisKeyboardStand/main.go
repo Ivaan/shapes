@@ -6,6 +6,8 @@ import (
 	"github.com/deadsy/sdfx/obj"
 	"github.com/deadsy/sdfx/render"
 	"github.com/deadsy/sdfx/sdf"
+	v2 "github.com/deadsy/sdfx/vec/v2"
+	v3 "github.com/deadsy/sdfx/vec/v3"
 )
 
 func main() {
@@ -17,13 +19,13 @@ func main() {
 	nutCircleRadius := 8.0
 	nutThickness := 8.0
 	boardWidth := 149.2438
-	treeCenter := sdf.V2{X: 20, Y: 45}
+	treeCenter := v2.Vec{X: 20, Y: 45}
 	bendOffset := thickThickness*(boardWidth/(thickThickness-thinThickness)) - boardWidth
 	tiltAngle := math.Atan2(thickThickness-thinThickness, boardWidth)
-	irisScrewLocations := [...]sdf.V2{{X: 3.9067, Y: 3.8671}, {X: 69.6776, Y: -14.9993}, {X: 125.7031, Y: -29.7570}, {X: 149.2438, Y: 11.1359}, {X: 135.4798, Y: 20.5876}, {X: 123.2997, Y: 38.1379}, {X: 122.8589, Y: 86.1195}, {X: 102.3013, Y: 94.3053}, {X: 52.4209, Y: 94.9352}, {X: 3.7082, Y: 84.1462}}
+	irisScrewLocations := [...]v2.Vec{{X: 3.9067, Y: 3.8671}, {X: 69.6776, Y: -14.9993}, {X: 125.7031, Y: -29.7570}, {X: 149.2438, Y: 11.1359}, {X: 135.4798, Y: 20.5876}, {X: 123.2997, Y: 38.1379}, {X: 122.8589, Y: 86.1195}, {X: 102.3013, Y: 94.3053}, {X: 52.4209, Y: 94.9352}, {X: 3.7082, Y: 84.1462}}
 	//Some experimentation with a not an Iris keyboard
 	//irisScrewLocations := [...]sdf.V2{{X: 163.7082, Y: -40.2331}, {X: 190.2947, Y: 16.7791}, {X: 80.4060, Y: -3.4064}, {X: 128.5439, Y: 103.9666}, {X: 148.5527, Y: 124.3147}, {X: 95.0694, Y: 126.1336}, {X: 18.5439, Y: 103.9648}, {X: 0.0000, Y: 124.3148}, {X: 0.0000, Y: 0.0000}, {X: 0.0000, Y: -40.2331}}
-	nutLocations := [...]sdf.V2{{X: 28, Y: 10}, {X: 25, Y: 74}, {X: 112, Y: 77}, {X: 116, Y: 0}}
+	nutLocations := [...]v2.Vec{{X: 28, Y: 10}, {X: 25, Y: 74}, {X: 112, Y: 77}, {X: 116, Y: 0}}
 	threadRadius := 4.0 //thead, as in bolt thread
 	threadPitch := 3.0
 	threadTolerance := 0.20
@@ -48,7 +50,7 @@ func main() {
 		)
 		topLayerScrewHoles[i] = sdf.Transform3D(
 			screwHoleSphere,
-			sdf.Translate3d(sdf.V3{X: v.X, Y: v.Y, Z: 0}),
+			sdf.Translate3d(v3.Vec{X: v.X, Y: v.Y, Z: 0}),
 		)
 	}
 
@@ -59,6 +61,7 @@ func main() {
 	screwHole, err := sdf.Screw3D(
 		tpi45,        // 2D thread profile
 		nutThickness, // length of screw
+		0,            // thread taper angle
 		threadPitch,  // thread to thread distance
 		1,            // number of thread starts (< 0 for left hand threads)
 	)
@@ -81,11 +84,11 @@ func main() {
 		)
 		bottomLayerScrewHoles[i] = sdf.Transform3D(
 			screwHole,
-			sdf.Translate3d(sdf.V3{X: v.X, Y: v.Y, Z: 0}),
+			sdf.Translate3d(v3.Vec{X: v.X, Y: v.Y, Z: 0}),
 		)
 		backwardBottomLayerScrewHoles[i] = sdf.Transform3D(
 			backwardScrewHole,
-			sdf.Translate3d(sdf.V3{X: v.X, Y: v.Y, Z: 0}),
+			sdf.Translate3d(v3.Vec{X: v.X, Y: v.Y, Z: 0}),
 		)
 	}
 
@@ -93,17 +96,17 @@ func main() {
 		sdf.Union3D(
 			sdf.Transform3D(
 				treeLoft3D(topLayerCircles, treeCenter, thickThickness-irisScrewCircleThickness/2, 0, 0),
-				sdf.Translate3d(sdf.V3{X: 0, Y: 0, Z: -irisScrewCircleThickness / 2}),
+				sdf.Translate3d(v3.Vec{X: 0, Y: 0, Z: -irisScrewCircleThickness / 2}),
 			),
 			sdf.Transform3D(
 				treeLoft3D(bottomLayerCircles, treeCenter, thickThickness-nutThickness/2, 0, 0),
-				sdf.Translate3d(sdf.V3{X: 0, Y: 0, Z: nutThickness / 2}).Mul(
+				sdf.Translate3d(v3.Vec{X: 0, Y: 0, Z: nutThickness / 2}).Mul(
 					sdf.MirrorXY(),
 				),
 			),
 		),
 		sdf.RotateX(-sdf.Tau/4).Mul(
-			sdf.Translate3d(sdf.V3{X: bendOffset, Y: 0, Z: 0}),
+			sdf.Translate3d(v3.Vec{X: bendOffset, Y: 0, Z: 0}),
 		),
 	)
 	stand = bend3d(stand, bendOffset+boardWidth)
@@ -115,21 +118,21 @@ func main() {
 	screwPads := sdf.Transform3D(
 		sdf.Extrude3D(sdf.Union2D(topLayerCircles...), irisScrewCircleThickness),
 		sdf.RotateY(-tiltAngle/2.0).Mul(
-			sdf.Translate3d(sdf.V3{X: bendOffset, Y: 0, Z: -irisScrewCircleThickness / 2}),
+			sdf.Translate3d(v3.Vec{X: bendOffset, Y: 0, Z: -irisScrewCircleThickness / 2}),
 		),
 	)
 
 	nuts := sdf.Transform3D(
 		sdf.Extrude3D(sdf.Union2D(bottomLayerCircles...), nutThickness),
 		sdf.RotateY(tiltAngle/2.0).Mul(
-			sdf.Translate3d(sdf.V3{X: bendOffset, Y: 0, Z: nutThickness / 2}),
+			sdf.Translate3d(v3.Vec{X: bendOffset, Y: 0, Z: nutThickness / 2}),
 		),
 	)
 
 	topLayerScrewHoles3D := sdf.Transform3D(
 		sdf.Union3D(topLayerScrewHoles...),
 		sdf.RotateY(-tiltAngle/2.0).Mul(
-			sdf.Translate3d(sdf.V3{X: bendOffset, Y: 0, Z: 0}),
+			sdf.Translate3d(v3.Vec{X: bendOffset, Y: 0, Z: 0}),
 		),
 	)
 
@@ -138,7 +141,7 @@ func main() {
 		sdf.Transform3D(
 			sdf.Union3D(bottomLayerScrewHoles...),
 			sdf.RotateY(tiltAngle/2.0).Mul(
-				sdf.Translate3d(sdf.V3{X: bendOffset, Y: 0, Z: nutThickness / 2}),
+				sdf.Translate3d(v3.Vec{X: bendOffset, Y: 0, Z: nutThickness / 2}),
 			),
 		),
 	)
@@ -148,7 +151,7 @@ func main() {
 		sdf.Transform3D(
 			sdf.Union3D(backwardBottomLayerScrewHoles...),
 			sdf.RotateY(tiltAngle/2.0).Mul(
-				sdf.Translate3d(sdf.V3{X: bendOffset, Y: 0, Z: nutThickness / 2}),
+				sdf.Translate3d(v3.Vec{X: bendOffset, Y: 0, Z: nutThickness / 2}),
 			),
 		),
 	)
@@ -177,6 +180,7 @@ func main() {
 	tallScrewBolt, err := sdf.Screw3D(
 		tpe45,          // 2D thread profile
 		tallBoltHeight, // length of screw
+		0,              // thread taper angle
 		threadPitch,    // thread to thread distance
 		1,              // number of thread starts (< 0 for left hand threads)
 	)
@@ -187,6 +191,7 @@ func main() {
 	shortScrewBolt, err := sdf.Screw3D(
 		tpe45,           // 2D thread profile
 		shortBoltHeight, // length of screw
+		0,               // thread taper angle
 		threadPitch,     // thread to thread distance
 		1,               // number of thread starts (< 0 for left hand threads)
 	)
@@ -210,7 +215,7 @@ func main() {
 	_ = nut
 
 	//render.RenderSTLSlow(leftStand, 800, "ergodoneleftStand.stl")
-	render.RenderSTLSlow(leftStand, 200, "ergodoneleftStandLow.stl")
+	render.ToSTL(leftStand, "ergodoneleftStandLow.stl", render.NewMarchingCubesUniform(200))
 	//render.RenderSTLSlow(rightStand, 200, "ergodonerightStandLow.stl")
 	//render.RenderSTLSlow(tallScrewBolt, 300, "tallScrewBoltSlow.stl")
 	//render.RenderSTLSlow(shortScrewBolt, 200, "shortScrewBoltSlow.stl")
