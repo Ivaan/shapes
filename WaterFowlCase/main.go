@@ -23,6 +23,9 @@ type circ struct {
 }
 
 func main() {
+	plateThickness := 5.0
+	wallThickness := 5.0
+	wallHeight := 5.0
 	circs := []circ{
 		{Loc: v2.Vec{X: 28.28427124746189, Y: -25.4558441227157}, R: 6},                               //6
 		{Loc: v2.Vec{X: 12, Y: -9.171572875253815}, R: 6},                                             //5
@@ -46,11 +49,16 @@ func main() {
 		{X: 137.9449971804252, Y: 0.2128870011787197},
 		{X: 103.3410329784794, Y: -0.372899436447425},
 	}
-	//footSize := v3.Vec{X: 42, Y: 5.9, Z: 2.5}
 	footRadius := 1.5
 	footLength := 39.0 //distance between circle centers
-	footLocations := [][2]v2.Vec{
-		//X: 15, Y: 75+15/2 - footLength},{Y:1}
+	footThickness := 2.4
+	feet := []sdf.SDF2{
+		footBetween(circs[1].Loc, circs[2].Loc, footRadius, footLength),
+		footBetween(circs[2].Loc, circs[4].Loc, footRadius, footLength),
+		footBetween(circs[4].Loc, circs[5].Loc, footRadius, footLength),
+		footAt(screwLocations[4].Add(screwLocations[5]).DivScalar(2), circs[4].Loc.Sub(screwLocations[4].Add(screwLocations[5]).DivScalar(2)), footRadius, footLength),
+		// footBetween(circs[1].Loc, screwLocations[1], footRadius, footLength),
+		// footBetween(v2.Vec{X: circs[5].Loc.X, Y: circs[5].Loc.Y + 3}, v2.Vec{X: circs[1].Loc.X, Y: circs[5].Loc.Y + 3}, footRadius, footLength),
 	}
 
 	bottom2D, err := makeProfile(circs, 0.0)
@@ -58,32 +66,35 @@ func main() {
 		panic(err)
 	}
 
-	bottomOutling2D, err := makeProfile(circs, 5)
+	bottomOutling2D, err := makeProfile(circs, wallThickness)
 	if err != nil {
 		panic(err)
 	}
 
-	bottom3D := sdf.Extrude3D(bottom2D, 5)
-	bottomOutline3D := sdf.Extrude3D(bottomOutling2D, 10)
+	bottom3D := extrudeFromTo(bottom2D, plateThickness, wallHeight+plateThickness)
+	bottomOutline3D := extrudeFromTo(bottomOutling2D, 0, wallHeight+plateThickness)
 	plate := sdf.Difference3D(
 		bottomOutline3D,
-		sdf.Transform3D(
-			bottom3D,
-			sdf.Translate3d(v3.Vec{Z: 2.5}),
-		),
+		bottom3D,
 	)
 
 	screwHoles := make([]sdf.SDF3, len(screwLocations))
 	for i, sl2D := range screwLocations {
-		sl3D := v3.Vec{X: sl2D.X, Y: sl2D.Y, Z: 0}
+		sl3D := v3.Vec{X: sl2D.X, Y: sl2D.Y, Z: plateThickness}
 		sh, err := sphereAt(sl3D, screwHoleRadius)
 		if err != nil {
 			panic(err)
 		}
 		screwHoles[i] = sh
 	}
+
+	feet3D := make([]sdf.SDF3, len(feet))
+	for i, f2D := range feet {
+		feet3D[i] = extrudeFromThickness(f2D, plateThickness, -footThickness)
+	}
 	plate = sdf.Difference3D(plate, sdf.Union3D(screwHoles...))
-	render.ToSTL(plate, "bottom.stl", render.NewMarchingCubesUniform(500))
+	plate = sdf.Difference3D(plate, sdf.Union3D(feet3D...))
+	render.ToSTL(plate, "bottom.stl", render.NewMarchingCubesUniform(1000))
 }
 
 func makeProfile(circs []circ, expand float64) (sdf.SDF2, error) {
@@ -211,12 +222,43 @@ func sphereAt(loc v3.Vec, r float64) (sdf.SDF3, error) {
 	return sdf.Transform3D(s, sdf.Translate3d(loc)), nil
 }
 
-func footAt(start, direction v2.Vec, r, length float64) sdf.SDF2{
+func extrudeFromTo(s2 sdf.SDF2, fromZ, toZ float64) sdf.SDF3 {
+	if fromZ > toZ {
+		fromZ, toZ = toZ, fromZ
+	}
+	return sdf.Transform3D(
+		sdf.Extrude3D(s2, toZ-fromZ),
+		sdf.Translate3d(v3.Vec{Z: (toZ-fromZ)/2 + fromZ}),
+	)
+}
+func extrudeFromThickness(s2 sdf.SDF2, fromZ, thickness float64) sdf.SDF3 {
+	return extrudeFromTo(s2, fromZ, fromZ+thickness)
+}
+func footAt(start, direction v2.Vec, r, length float64) sdf.SDF2 {
 	circs := []circ{
 		{Loc: start, R: r},
-		{Loc: start.Add(direction.Normalize().Mul(length))}
+		{Loc: start.Add(direction.Normalize().MulScalar(length)), R: r},
 	}
-	return makeProfile(circs, 0)
+	foot, err := makeProfile(circs, 0)
+	if err != nil {
+		panic(err)
+	}
+	return foot
+}
+
+func footBetween(p1, p2 v2.Vec, r, length float64) sdf.SDF2 {
+	center := p1.Add(p2.Sub(p1).DivScalar(2))
+	q1 := center.Add(center.Sub(p1).Normalize().MulScalar(length / 2))
+	q2 := center.Add(center.Sub(p2).Normalize().MulScalar(length / 2))
+	circs := []circ{
+		{Loc: q1, R: r},
+		{Loc: q2, R: r},
+	}
+	foot, err := makeProfile(circs, 0)
+	if err != nil {
+		panic(err)
+	}
+	return foot
 }
 
 func lineFromTo(from, to v2.Vec) sdf.SDF2 {
