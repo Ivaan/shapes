@@ -26,3 +26,9 @@ Geometries:
 Holes at keyboard screw locations
 Holes at feet locations
 Hole and tabs for locking cover to trays
+
+Observations after fitment test:
+[x] - screw holes too small
+[ ] - switch allowance (lip exclusion) must be deeper
+[x] - keyboard tolerance can be loosened
+

@@ -46,10 +46,10 @@ func main() {
 		{X: 103.3410329784794, Y: -0.372899436447425},
 	}
 
-	fitTolerance := 0.2
+	fitTolerance := 0.4
 	basePlateThickness := 3.0
 	wallThickness := 3.0
-	keyboardThickness := 32.0 //thickness overall
+	keyboardThickness := 32.0 //thickness overall of the keeb
 	// keyboardLayerAThickness := 6.0 //not using this for now
 	keyboardLayerBThickness := 11.6
 	lidLip := 1.1 //width of the lip inside the lid that catches the keeb and keeps it from rattling around
@@ -61,7 +61,7 @@ func main() {
 	// rotationAngle := 0.0
 	platesApart := 20.0 //distance plates are from eachother
 
-	screwHoleRadius := 2.5
+	screwHoleRadius := 2.8
 	screwHoleDepth := 1.0
 
 	footRadius := 3.0
