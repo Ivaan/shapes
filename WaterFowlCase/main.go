@@ -46,7 +46,9 @@ func main() {
 		{X: 103.3410329784794, Y: -0.372899436447425},
 	}
 
-	fitTolerance := 0.4
+	keebFitTolerance := 0.6
+	footFitTolerance := 0.25
+	plateFitTolerance := 0.2
 	basePlateThickness := 3.0
 	wallThickness := 3.0
 	keyboardThickness := 32.0 //thickness overall of the keeb
@@ -54,6 +56,7 @@ func main() {
 	keyboardLayerBThickness := 11.6
 	lidLip := 1.1 //width of the lip inside the lid that catches the keeb and keeps it from rattling around
 	lipExclusion := sdf.Transform2D(sdf.Box2D(v2.Vec{X: 8, Y: 20}, 2), sdf.Translate2d(v2.Vec{X: 9.5, Y: 23.6}))
+	keeperAngle := sdf.Tau / 32
 
 	rotationAxisVector := v3.Vec{Y: 5, Z: 3}
 	rotationAxisY := circsRight[2].Loc.Y / 2
@@ -69,24 +72,27 @@ func main() {
 	footLength := 39.0 //distance between circle centers
 	footThickness := 2.2
 
-	// threadRadius := 4.0 //thead, as in bolt thread
-	// threadPitch := 3.0
-	// threadTolerance := 0.20
+	threadRadius := 4.0 //thead, as in bolt thread
+	threadPitch := 3.0
+	threadTolerance := 0.20
+	nutCircleRadius := 8.0
+	nutThickness := 8.0
 	// tallBoltHeight := 50.0
+
 	feet := []sdf.SDF2{
 
-		footBetween(circsRight[6].Loc, circsRight[0].Loc, footRadius+fitTolerance, footLength),
-		footBetween(circsRight[0].Loc, circsRight[2].Loc, footRadius+fitTolerance, footLength),
-		footBetween(circsRight[2].Loc, circsRight[3].Loc, footRadius+fitTolerance, footLength),
-		footAt(screwLocations[4].Add(screwLocations[5]).DivScalar(2), circsRight[2].Loc.Sub(screwLocations[4].Add(screwLocations[5]).DivScalar(2)), footRadius+fitTolerance, footLength),
+		footBetween(circsRight[6].Loc, circsRight[0].Loc, footRadius+footFitTolerance, footLength),
+		footBetween(circsRight[0].Loc, circsRight[2].Loc, footRadius+footFitTolerance, footLength),
+		footBetween(circsRight[2].Loc, circsRight[3].Loc, footRadius+footFitTolerance, footLength),
+		footAt(screwLocations[4].Add(screwLocations[5]).DivScalar(2), circsRight[2].Loc.Sub(screwLocations[4].Add(screwLocations[5]).DivScalar(2)), footRadius+footFitTolerance, footLength),
 	}
 
-	keebRightShapeA, err := makeProfile(circsRight, fitTolerance)
+	keebRightShapeA, err := makeProfile(circsRight, keebFitTolerance) // subtracted from lid for bottom part of keeb
 	if err != nil {
 		panic(err)
 	}
 
-	keebRightShapeB, err := makeProfile(circsRight, -lidLip)
+	keebRightShapeB, err := makeProfile(circsRight, -lidLip) //subtracted from lid for part above keeb, lip holds keeb down against plate
 	if err != nil {
 		panic(err)
 	}
@@ -103,9 +109,50 @@ func main() {
 	keebLeft := sdf.Transform3D(keebRight, sdf.MirrorYZ())
 	keebHole := sdf.Union3D(keebRight, keebLeft)
 
-	profileCache := Cache2DFunc(profileExtrude(circsRight, basePlateThickness, fitTolerance, wallThickness))
-	plateRightBare := ExtrudeBy2DFunction(profileCache.GetShapeAt, basePlateThickness, v3.Vec{}.AddScalar(wallThickness))
-	plateRightBare = sdf.Transform3D(plateRightBare, sdf.Translate3d(v3.Vec{Z: basePlateThickness / 2}))
+	profileCacheSub := Cache2DFunc(profileExtrude(circsRight, basePlateThickness, plateFitTolerance, wallThickness))
+	plateRightBareSub := ExtrudeBy2DFunction(profileCacheSub.GetShapeAt, basePlateThickness, v3.Vec{}.AddScalar(wallThickness))
+	plateRightBareSub = sdf.Cut3D(plateRightBareSub, v3.Vec{X: circsRight[2].Loc.X + circsRight[2].R + plateFitTolerance}, sdf.RotateY(keeperAngle).MulPosition(v3.Vec{X: -1}))
+	plateRightBareSub = sdf.Transform3D(plateRightBareSub, sdf.Translate3d(v3.Vec{Z: basePlateThickness / 2}))
+
+	profileCache := Cache2DFunc(profileExtrude(circsRight, basePlateThickness, keebFitTolerance, wallThickness))
+	plateRight := ExtrudeBy2DFunction(profileCache.GetShapeAt, basePlateThickness, v3.Vec{}.AddScalar(wallThickness))
+	plateRight = sdf.Cut3D(plateRight, v3.Vec{X: circsRight[2].Loc.X + circsRight[2].R}, sdf.RotateY(keeperAngle).MulPosition(v3.Vec{X: -1}))
+	plateRight = sdf.Transform3D(plateRight, sdf.Translate3d(v3.Vec{Z: basePlateThickness / 2}))
+
+	boltHead, err := sdf.Cylinder3D(nutThickness, nutCircleRadius, 0.1)
+	if err != nil {
+		panic(err)
+	}
+	tpe45, err := threadProfile(threadRadius-threadTolerance, threadPitch, 45, "external")
+	if err != nil {
+		panic(err)
+	}
+	boltThread, err := sdf.Screw3D(
+		tpe45,          // 2D thread profile
+		nutThickness*3, // length of screw
+		0,              // thread taper angle
+		threadPitch,    // thread to thread distance
+		1,              // number of thread starts (< 0 for left hand threads)
+	)
+	if err != nil {
+		panic(err)
+	}
+	bolt := sdf.Union3D(
+		boltHead,
+		sdf.Transform3D(
+			boltThread,
+			sdf.Translate3d(v3.Vec{Z: nutThickness * (3/2 + .5)}),
+		),
+	)
+	bolt = sdf.Transform3D(
+		bolt,
+		sdf.Translate3d(v3.Vec{Y: rotationAxisY}).Mul(
+			sdf.RotateX(-math.Atan2(rotationAxisVector.Y, rotationAxisVector.Z)).Mul(
+				sdf.Translate3d(v3.Vec{Z: nutThickness}),
+			),
+		),
+	)
+
 	screwHoles := make([]sdf.SDF3, len(screwLocations))
 	for i, sl2D := range screwLocations {
 		slTop3D := v3.Vec{X: sl2D.X, Y: sl2D.Y, Z: basePlateThickness}
@@ -118,44 +165,36 @@ func main() {
 	for i, f2D := range feet {
 		feetHoles[i] = extrudeFromThickness(f2D, basePlateThickness, -footThickness)
 	}
-	plateRight := sdf.Difference3D(plateRightBare, sdf.Union3D(screwHoles...))
+	plateRight = sdf.Difference3D(plateRight, sdf.Union3D(screwHoles...))
 	plateRight = sdf.Difference3D(plateRight, sdf.Union3D(feetHoles...))
 	plateRight = sdf.Transform3D(
 		plateRight,
 		sdf.Translate3d(v3.Vec{X: platesApart / 2}),
 	)
 	plateLeft := sdf.Transform3D(plateRight, sdf.MirrorYZ())
-	plateRightBare = sdf.Transform3D(
-		plateRightBare,
+	plateRightBareSub = sdf.Transform3D(
+		plateRightBareSub,
 		sdf.Translate3d(v3.Vec{X: platesApart / 2}),
 	)
-	plateLeftBare := sdf.Transform3D(plateRightBare, sdf.MirrorYZ())
+	plateLeftBareSub := sdf.Transform3D(plateRightBareSub, sdf.MirrorYZ())
 
 	plates := sdf.Union3D(
 		plateRight,
 		plateLeft,
+		bolt,
+		//		cylinderFromTo(v3.Vec{Y: rotationAxisY}, v3.Vec{Y: rotationAxisY}.Add(rotationAxisVector.MulScalar(10.0)), 3, .5),
+	)
+	// myMinFunc := func(a, b float64) float64 {
+	// 	k := 4.5
+	// 	h := sdf.Clamp(0.5+0.5*(b-a)/k, 0, 1)
+	// 	return sdf.Mix(b, a, h) - k*h*(1-h)
+	// }
+	plates.(*sdf.UnionSDF3).SetMin(sdf.PolyMin(13.9))
+	platesBareSub := sdf.Union3D(
+		plateRightBareSub,
+		plateLeftBareSub,
 		cylinderFromTo(v3.Vec{Y: rotationAxisY}, v3.Vec{Y: rotationAxisY}.Add(rotationAxisVector.MulScalar(10.0)), 3, .5),
 	)
-	platesBare := sdf.Union3D(
-		plateRightBare,
-		plateLeftBare,
-		cylinderFromTo(v3.Vec{Y: rotationAxisY}, v3.Vec{Y: rotationAxisY}.Add(rotationAxisVector.MulScalar(10.0)), 3, .5),
-	)
-
-	// tpe45, err := threadProfile(threadRadius-threadTolerance, threadPitch, 45, "external")
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// tallScrewBolt, err := sdf.Screw3D(
-	// 	tpe45,          // 2D thread profile
-	// 	tallBoltHeight, // length of screw
-	// 	0,              // thread taper angle
-	// 	threadPitch,    // thread to thread distance
-	// 	1,              // number of thread starts (< 0 for left hand threads)
-	// )
-	// if err != nil {
-	// 	panic(err)
-	// }
 
 	numCircs := 2 * len(circsRight)
 	circsTop := make([]circ, numCircs)
@@ -182,15 +221,17 @@ func main() {
 	topCover = sdf.Difference3D(
 		topCover,
 		sdf.Union3D(
-			platesBare,
+			platesBareSub,
 			keebHole,
 		),
 	)
-	topCover = sdf.Cut3D(topCover, v3.Vec{Z: basePlateThickness + 15}, v3.Vec{Z: -1})
-	render.ToSTL(topCover, "topCover.stl", render.NewMarchingCubesUniform(1500))
-	render.ToSTL(plateRight, "plateRight.stl", render.NewMarchingCubesUniform(1500))
+	// topCover = sdf.Cut3D(topCover, v3.Vec{Z: basePlateThickness + 15}, v3.Vec{Z: -1})
+	// render.ToSTL(topCover, "topCover.stl", render.NewMarchingCubesUniform(1500))
+	// render.ToSTL(plateRight, "plateRight.stl", render.NewMarchingCubesUniform(800))
+	// render.ToSTL(platesBareSub, "platesBareSub.stl", render.NewMarchingCubesUniform(1500))
+	render.ToSTL(plates, "plates.stl", render.NewMarchingCubesUniform(500))
 	_ = plates
-	_ = topCover.BoundingBox()
+	_ = topCover
 	fmt.Println(profileCache)
 }
 
