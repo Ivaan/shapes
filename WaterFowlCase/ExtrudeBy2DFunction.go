@@ -67,7 +67,7 @@ func ExpandExtrude(sdf2 sdf.SDF2, height, expand float64) func(float64) sdf.SDF2
 	return func(z float64) sdf.SDF2 {
 		k := Clamp(1-(z+height/2)/height, 0, 1)
 		// mix the 2D SDFs
-		a := Mix(0, height, k)
+		a := sdf.Mix(0, height, k)
 		return sdf.Offset2D(sdf2, a)
 	}
 }
@@ -81,9 +81,4 @@ func Clamp(x, a, b float64) float64 {
 		return b
 	}
 	return x
-}
-
-// Mix does a linear interpolation from x to y, a = [0,1]
-func Mix(x, y, a float64) float64 {
-	return x + (a * (y - x))
 }

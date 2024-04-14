@@ -77,7 +77,9 @@ func main() {
 	threadTolerance := 0.20
 	nutCircleRadius := 8.0
 	nutThickness := 8.0
-	// tallBoltHeight := 50.0
+	boltLength := nutThickness * 3
+	ringLoose := 0.5
+	rotationSurfaceOffset := (nutCircleRadius * rotationAxisVector.Y) / rotationAxisVector.Z
 
 	feet := []sdf.SDF2{
 
@@ -119,38 +121,45 @@ func main() {
 	plateRight = sdf.Cut3D(plateRight, v3.Vec{X: circsRight[2].Loc.X + circsRight[2].R}, sdf.RotateY(keeperAngle).MulPosition(v3.Vec{X: -1}))
 	plateRight = sdf.Transform3D(plateRight, sdf.Translate3d(v3.Vec{Z: basePlateThickness / 2}))
 
+	moveToRotationAxis := func(along float64) sdf.M44 {
+
+		return sdf.Translate3d(v3.Vec{Y: rotationAxisY}).Mul(
+			sdf.RotateX(-math.Atan2(rotationAxisVector.Y, rotationAxisVector.Z)).Mul(
+				sdf.Translate3d(v3.Vec{Z: along}),
+			),
+		)
+	}
 	boltHead, err := sdf.Cylinder3D(nutThickness, nutCircleRadius, 0.1)
 	if err != nil {
 		panic(err)
 	}
+	ringHole, err := sdf.Cylinder3D(nutThickness, threadRadius+ringLoose, 0)
+	ring := sdf.Difference3D(boltHead, ringHole)
 	tpe45, err := threadProfile(threadRadius-threadTolerance, threadPitch, 45, "external")
 	if err != nil {
 		panic(err)
 	}
 	boltThread, err := sdf.Screw3D(
-		tpe45,          // 2D thread profile
-		nutThickness*3, // length of screw
-		0,              // thread taper angle
-		threadPitch,    // thread to thread distance
-		1,              // number of thread starts (< 0 for left hand threads)
+		tpe45,       // 2D thread profile
+		boltLength,  // length of screw
+		0,           // thread taper angle
+		threadPitch, // thread to thread distance
+		1,           // number of thread starts (< 0 for left hand threads)
 	)
 	if err != nil {
 		panic(err)
 	}
-	bolt := sdf.Union3D(
-		boltHead,
-		sdf.Transform3D(
-			boltThread,
-			sdf.Translate3d(v3.Vec{Z: nutThickness * (3/2 + .5)}),
-		),
+	boltThread = sdf.Transform3D(
+		boltThread,
+		moveToRotationAxis(-boltLength/2+nutThickness+rotationSurfaceOffset),
 	)
-	bolt = sdf.Transform3D(
-		bolt,
-		sdf.Translate3d(v3.Vec{Y: rotationAxisY}).Mul(
-			sdf.RotateX(-math.Atan2(rotationAxisVector.Y, rotationAxisVector.Z)).Mul(
-				sdf.Translate3d(v3.Vec{Z: nutThickness}),
-			),
-		),
+	boltHead = sdf.Transform3D(
+		boltHead,
+		moveToRotationAxis(-nutThickness/2+rotationSurfaceOffset),
+	)
+	ring = sdf.Transform3D(
+		ring,
+		moveToRotationAxis(-nutThickness/2+rotationSurfaceOffset+nutThickness),
 	)
 
 	screwHoles := make([]sdf.SDF3, len(screwLocations))
@@ -171,29 +180,44 @@ func main() {
 		plateRight,
 		sdf.Translate3d(v3.Vec{X: platesApart / 2}),
 	)
+
 	plateLeft := sdf.Transform3D(plateRight, sdf.MirrorYZ())
+
+	plateRight = Connect3DBy2DSliceLoft(plateRight, boltHead, v3.Vec{X: circsRight[0].Loc.X - circsRight[0].R + platesApart/2, Y: circsRight[0].Loc.Y, Z: basePlateThickness / 2}, v3.Vec{X: 0, Y: circsRight[0].Loc.Y, Z: 8})
+	plateRight = sdf.Union3D(
+		plateRight,
+		boltThread,
+		// cylinderFromTo(v3.Vec{X: circsRight[0].Loc.X - circsRight[0].R + platesApart/2, Y: circsRight[0].Loc.Y, Z: basePlateThickness / 2}, v3.Vec{X: 0, Y: circsRight[0].Loc.Y, Z: 8}, 1, 0),
+	)
+	plateRight = sdf.Cut3D(plateRight, v3.Vec{}, v3.Vec{Z: 1})
+
+	plateLeft = Connect3DBy2DSliceLoft(plateLeft, ring, v3.Vec{X: -circsRight[0].Loc.X + circsRight[0].R - platesApart/2, Y: circsRight[0].Loc.Y, Z: basePlateThickness / 2}, v3.Vec{X: 0, Y: circsRight[0].Loc.Y, Z: 8})
+	plateLeft = sdf.Union3D(
+		plateLeft,
+		// cylinderFromTo(v3.Vec{X: -circsRight[0].Loc.X + circsRight[0].R - platesApart/2, Y: circsRight[0].Loc.Y, Z: basePlateThickness / 2}, v3.Vec{X: 0, Y: circsRight[0].Loc.Y, Z: 8}, 1, 0),
+	)
+	plates := sdf.Union3D(plateRight, sdf.Transform3D(plateRight, sdf.MirrorYZ()))
+
 	plateRightBareSub = sdf.Transform3D(
 		plateRightBareSub,
 		sdf.Translate3d(v3.Vec{X: platesApart / 2}),
 	)
+	boltGap, err := sdf.Cylinder3D(boltLength, nutCircleRadius, 0)
+	if err != nil {
+		panic(err)
+	}
+	boltGap = sdf.Transform3D(
+		boltGap,
+		moveToRotationAxis(-nutThickness/2+rotationSurfaceOffset+nutThickness),
+	)
+
+	plateRightBareSub = Connect3DBy2DSliceLoft(plateRightBareSub, boltGap, v3.Vec{X: circsRight[0].Loc.X - circsRight[0].R + platesApart/2, Y: circsRight[0].Loc.Y, Z: basePlateThickness / 2}, v3.Vec{X: 0, Y: circsRight[0].Loc.Y, Z: 8})
 	plateLeftBareSub := sdf.Transform3D(plateRightBareSub, sdf.MirrorYZ())
 
-	plates := sdf.Union3D(
-		plateRight,
-		plateLeft,
-		bolt,
-		//		cylinderFromTo(v3.Vec{Y: rotationAxisY}, v3.Vec{Y: rotationAxisY}.Add(rotationAxisVector.MulScalar(10.0)), 3, .5),
-	)
-	// myMinFunc := func(a, b float64) float64 {
-	// 	k := 4.5
-	// 	h := sdf.Clamp(0.5+0.5*(b-a)/k, 0, 1)
-	// 	return sdf.Mix(b, a, h) - k*h*(1-h)
-	// }
-	plates.(*sdf.UnionSDF3).SetMin(sdf.PolyMin(13.9))
 	platesBareSub := sdf.Union3D(
 		plateRightBareSub,
 		plateLeftBareSub,
-		cylinderFromTo(v3.Vec{Y: rotationAxisY}, v3.Vec{Y: rotationAxisY}.Add(rotationAxisVector.MulScalar(10.0)), 3, .5),
+		// cylinderFromTo(v3.Vec{Y: rotationAxisY}, v3.Vec{Y: rotationAxisY}.Add(rotationAxisVector.MulScalar(10.0)), 3, .5),
 	)
 
 	numCircs := 2 * len(circsRight)
@@ -226,11 +250,16 @@ func main() {
 		),
 	)
 	// topCover = sdf.Cut3D(topCover, v3.Vec{Z: basePlateThickness + 15}, v3.Vec{Z: -1})
-	// render.ToSTL(topCover, "topCover.stl", render.NewMarchingCubesUniform(1500))
+	render.ToSTL(topCover, "topCover.stl", render.NewMarchingCubesUniform(500))
 	// render.ToSTL(plateRight, "plateRight.stl", render.NewMarchingCubesUniform(800))
+	// render.ToSTL(plateLeft, "plateLeft.stl", render.NewMarchingCubesUniform(800))
 	// render.ToSTL(platesBareSub, "platesBareSub.stl", render.NewMarchingCubesUniform(1500))
 	render.ToSTL(plates, "plates.stl", render.NewMarchingCubesUniform(500))
-	_ = plates
+	// render.ToSTL(platesBareSub, "platesBareSub.stl", render.NewMarchingCubesUniform(500))
+
+	// render.ToSTL(ShowConnect(), "ShowConnect.stl", render.NewMarchingCubesUniform(500))
+	// render.ToSTL(ShowDebug(), "ShowDebug.stl", render.NewMarchingCubesUniform(500))
+	_ = plateLeft
 	_ = topCover
 	fmt.Println(profileCache)
 }
@@ -239,7 +268,7 @@ func profileExtrude(circs []circ, height, minExpand, maxExpand float64) func(flo
 	return func(z float64) sdf.SDF2 {
 		k := Clamp(1-(z+height/2)/height, 0, 1)
 		// mix the 2D SDFs
-		a := Mix(minExpand, maxExpand, k)
+		a := sdf.Mix(minExpand, maxExpand, k)
 		p, err := makeProfile(circs, a)
 		if err != nil {
 			panic(err)
