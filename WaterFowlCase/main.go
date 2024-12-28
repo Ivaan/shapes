@@ -250,17 +250,19 @@ func main() {
 		),
 	)
 	// topCover = sdf.Cut3D(topCover, v3.Vec{Z: basePlateThickness + 15}, v3.Vec{Z: -1})
-	render.ToSTL(topCover, "topCover.stl", render.NewMarchingCubesUniform(500))
+	// render.ToSTL(topCover, "topCover.stl", render.NewMarchingCubesUniform(500))
 	// render.ToSTL(plateRight, "plateRight.stl", render.NewMarchingCubesUniform(800))
 	// render.ToSTL(plateLeft, "plateLeft.stl", render.NewMarchingCubesUniform(800))
 	// render.ToSTL(platesBareSub, "platesBareSub.stl", render.NewMarchingCubesUniform(1500))
-	render.ToSTL(plates, "plates.stl", render.NewMarchingCubesUniform(500))
+	// render.ToSTL(plates, "plates.stl", render.NewMarchingCubesUniform(500))
 	// render.ToSTL(platesBareSub, "platesBareSub.stl", render.NewMarchingCubesUniform(500))
+	render.ToSTL(TestDrape(), "Drape.stl", render.NewMarchingCubesUniform(500))
 
 	// render.ToSTL(ShowConnect(), "ShowConnect.stl", render.NewMarchingCubesUniform(500))
 	// render.ToSTL(ShowDebug(), "ShowDebug.stl", render.NewMarchingCubesUniform(500))
 	_ = plateLeft
 	_ = topCover
+	_ = plates
 	fmt.Println(profileCache)
 }
 
