@@ -69,9 +69,9 @@ func newHyperbol(minX, maxX float64) sdf.SDF2 {
 
 func (hyp hyperbol) Evaluate(p sdf.V2) float64 {
 	x := hyp.nearestXPointTo(p)
-	var q sdf V2
+	var q sdf.V2
 
-	if x < hyp.minX || p.X < hyp.minX { 
+	if x < hyp.minX || p.X < hyp.minX {
 		x = hyp.MinX
 		if p.Y < hyp.maxY {
 			q = sdf.V2(x, p.Y)
@@ -85,7 +85,7 @@ func (hyp hyperbol) Evaluate(p sdf.V2) float64 {
 	return sdf.V2{x, hyp.curveFunc(adjustedX)}
 	//p = -2/5 (x - 2 (y + 1))
 	q := hyp.nearestPointTo(p)
-	if q.X < hyp.minX { 
+	if q.X < hyp.minX {
 		if q.Y < 0 {
 			return q.Sub(hyp.bb.Min).Length()
 		} else if q.Y < hyp.bb.Max.Y {
@@ -117,11 +117,11 @@ func (hyp hyperbol) BoundingBox() sdf.Box2 {
 	return hyp.bb
 }
 
-func (hyp hyperbol) nearestXPointTo(q sdfV2) {
+func (hyp hyperbol) nearestXPointTo(q sdf.V2) float64 {
 	return -2.0 / 5.0 * (q.X - 2.0*(q.Y+1.0))
 }
 
-func (hyp hyperbol) curveFunc(x) {
+func (hyp hyperbol) curveFunc(x float64) float64 {
 	return -x/2.0 + 2.0
 }
 
