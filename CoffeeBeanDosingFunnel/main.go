@@ -2,10 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/deadsy/sdfx/render"
-	"github.com/deadsy/sdfx/sdf"
 	"math"
 	"os"
+
+	"github.com/deadsy/sdfx/render"
+	"github.com/deadsy/sdfx/sdf"
+
 	// v2 "github.com/deadsy/sdfx/vec/v2"
 	v3 "github.com/deadsy/sdfx/vec/v3"
 )
@@ -13,7 +15,14 @@ import (
 func main() {
 	tubeID := 22.0
 	funnelID := 55.0
-	tubeLipID := 25.0
+	vialRound := 3.0
+	tubeHolderStack := []Dimensions{
+		{Height: 1.0, Radius: 25.0 / 2.0}, //lip
+		{Height: 9.0, Radius: 27.3 / 2.0}, //threads
+		// {Height: 1.0, Radius: 25.0 / 2.0}, //after threads, before body of vial
+		{Height: 10.0, Radius: 33.0 / 2.0, Round: vialRound},
+	}
+	// tubeLipID := 25.0
 	tubeLength := 120.0
 	funnelShorter := 11.0
 	thickness := 2.0
@@ -21,6 +30,10 @@ func main() {
 	// this is the amount the pipe dips due to the bend C - A where C^2 = A^2 + B^2
 	bendDip := math.Sqrt(bendRadius*bendRadius+tubeLength*tubeLength) - bendRadius
 	openingAngle := 100.0 / 360.0 * sdf.Tau
+	thumbSpotDepth := thickness * 2
+	thumbSpotDepthSphereDistance := 30.0
+
+	doText := false
 	textHeight := 15.0
 	textPositionFromEnd := 20.0
 
@@ -47,17 +60,19 @@ func main() {
 		fmt.Printf("can't generate text sdf3 %s\n", err)
 		os.Exit(1)
 	}
-	base = sdf.Union3D(
-		base,
-		sdf.Transform3D(
-			text3d,
-			sdf.Translate3d(v3.Vec{X: -tubeLength/2.0 + textPositionFromEnd, Z: tubeID/2.0 + thickness}),
-		),
-		sdf.Transform3D(
-			text3d,
-			sdf.Translate3d(v3.Vec{X: -tubeLength/2.0 + textPositionFromEnd, Z: -tubeID/2.0 - thickness}).Mul(sdf.RotateY(1.0/2.0*sdf.Tau)),
-		),
-	)
+	if doText {
+		base = sdf.Union3D(
+			base,
+			sdf.Transform3D(
+				text3d,
+				sdf.Translate3d(v3.Vec{X: -tubeLength/2.0 + textPositionFromEnd, Z: tubeID/2.0 + thickness}),
+			),
+			sdf.Transform3D(
+				text3d,
+				sdf.Translate3d(v3.Vec{X: -tubeLength/2.0 + textPositionFromEnd, Z: -tubeID/2.0 - thickness}).Mul(sdf.RotateY(1.0/2.0*sdf.Tau)),
+			),
+		)
+	}
 
 	base = sdf.Transform3D(base, sdf.Translate3d(v3.Vec{Y: -tubeID/4.0 - thickness/2.0 + bendDip/2.0}))
 
@@ -74,19 +89,23 @@ func main() {
 		panic(err)
 	}
 
-	channelOpeningKeepNormal := sdf.RotateZ(-openingAngle / 2.0).MulPosition(v3.Vec{Y: 1.0})
-	channelOpening := sdf.Cut3D(channel, v3.Vec{}, channelOpeningKeepNormal)
-	channelOpening = sdf.Cut3D(channelOpening, v3.Vec{}, sdf.MirrorXZ().MulPosition(channelOpeningKeepNormal))
-	channelOpening = sdf.Intersect3D(channel, channelOpening)
+	channelOpeningKeepNormal := sdf.RotateZ(-openingAngle / 2.0).MulPosition(v3.Vec{Y: -1.0})
+	channelCut1 := sdf.Cut3D(channel, v3.Vec{}, channelOpeningKeepNormal)
+	channelCut2 := sdf.Cut3D(channel, v3.Vec{}, sdf.MirrorXZ().MulPosition(channelOpeningKeepNormal))
+	channel = sdf.Union3D(channelCut1, channelCut2)
+	// channelOpening = sdf.Intersect3D(channel, channelOpening)
 	channelHole, err := sdf.Cylinder3D(tubeLength, tubeID/2.0, 0)
 	if err != nil {
 		panic(err)
 	}
+	channelHole = sdf.Transform3D(channelHole, sdf.Translate3d(v3.Vec{Z: -thickness})) //This moves the hole so the other end of the channel isn't cut away (leaving a wall)
+	channelHole = bendIt(channelHole)
+	channel = bendIt(channel)
 
 	positionFunnel := sdf.RotateY(math.Atan2(tubeID, tubeLength)).Mul(sdf.Translate3d(v3.Vec{X: tubeID / 2.0, Z: -funnelShorter / 2.0}))
 	moveFunnelEnd := sdf.Translate3d(v3.Vec{Z: tubeLength/2.0 - funnelShorter/2.0})
 
-	makeBendFunnel := func(length, r1, r2 float64) (sdf.SDF3, error) {
+	makeBendFunnel := func(length, r1, r2 float64, cut bool) (sdf.SDF3, error) {
 		funnel, err := sdf.Cone3D(length, r1, r2, 0) //using Inner Diameter as radius so it is doubled?
 		if err != nil {
 			return nil, err
@@ -97,7 +116,9 @@ func main() {
 		}
 		funnelEnd = sdf.Cut3D(funnelEnd, v3.Vec{}, v3.Vec{Z: 1})
 		funnelEnd = sdf.Cut3D(funnelEnd, v3.Vec{}, v3.Vec{X: -1})
-		funnel = sdf.Cut3D(funnel, v3.Vec{}, v3.Vec{X: -1})
+		if cut {
+			funnel = sdf.Cut3D(funnel, v3.Vec{}, v3.Vec{X: -1})
+		}
 		funnelEnd = sdf.Transform3D(funnelEnd, moveFunnelEnd)
 		funnel = sdf.Union3D(funnel, funnelEnd)
 
@@ -106,48 +127,95 @@ func main() {
 		return funnel, nil
 	}
 
-	funnelHole, err := makeBendFunnel(tubeLength-funnelShorter, 0, funnelID/2.0)
+	funnelHole, err := makeBendFunnel(tubeLength-funnelShorter, 0, funnelID/2.0, false)
 	if err != nil {
 		panic(err)
 	}
-	funnel, err := makeBendFunnel(tubeLength-funnelShorter, thickness, funnelID/2.0+thickness) //using Inner Diameter as radius so it is doubled?
+	funnel, err := makeBendFunnel(tubeLength-funnelShorter, thickness, funnelID/2.0+thickness, true) //using Inner Diameter as radius so it is doubled?
 	if err != nil {
 		panic(err)
 	}
 
-	channelHole = sdf.Union3D(channelHole, channelOpening)
-	channelHole = sdf.Transform3D(channelHole, sdf.Translate3d(v3.Vec{Z: -thickness})) //This moves the hole so the other end of the channel isn't cut away (leaving a wall)
-	channelHole = bendIt(channelHole)
-	channel = bendIt(channel)
-
-	holes := sdf.Union3D(channelHole, funnelHole)
-	pipe := sdf.Union3D(base, channel, funnel)
-	pipe = sdf.Difference3D(pipe, holes)
-
-	tubeLipHole, err := sdf.Cylinder3D(tubeLipID-tubeID, tubeLipID/2.0, 0)
+	vialHolderHole, err := stackedCylinders(0, tubeHolderStack...)
 	if err != nil {
 		panic(err)
 	}
-	tubeLip, err := sdf.Cone3D(tubeLipID-tubeID, tubeLipID/2.0+thickness, tubeLipID/2.0+thickness+tubeLipID-tubeID, 0)
+
+	d := getMaxRadiusAndSumHeight(tubeHolderStack...)
+	d.Radius += thickness
+	d.Height += -vialRound
+	d.Round = thickness
+	vialHolder, err := stackedCylinders(0, d)
 	if err != nil {
 		panic(err)
 	}
-	// tubeLip = sdf.Cut3D(tubeLip, v3.Vec{Y: -thickness}, v3.Vec{Y: -1})
-	tubeLip = sdf.Cut3D(tubeLip, v3.Vec{}, channelOpeningKeepNormal)
-	tubeLip = sdf.Cut3D(tubeLip, v3.Vec{}, sdf.MirrorXZ().MulPosition(channelOpeningKeepNormal))
 
-	tubeLip = sdf.Difference3D(tubeLip, tubeLipHole)
-	tubeLip = sdf.Transform3D(
-		tubeLip,
-		sdf.Translate3d(v3.Vec{X: -tubeLength/2.0 - (tubeLipID-tubeID)/2.0, Y: bendDip}).Mul(
-			sdf.RotateY(1.0/4.0*sdf.Tau).Mul(
-				sdf.RotateZ(-1.0/4.0*sdf.Tau),
+	thumbSpotSphere, err := sdf.Sphere3D(thumbSpotDepthSphereDistance)
+	if err != nil {
+		panic(err)
+	}
+
+	vialHolder = sdf.Difference3D(vialHolder, sdf.Transform3D(thumbSpotSphere, sdf.Translate3d(v3.Vec{Y: thumbSpotDepthSphereDistance + d.Radius - thumbSpotDepth})))
+	vialHolder = sdf.Difference3D(vialHolder, sdf.Transform3D(thumbSpotSphere, sdf.Translate3d(v3.Vec{Y: -thumbSpotDepthSphereDistance - d.Radius + thumbSpotDepth})))
+
+	vialHolderCut1 := sdf.Cut3D(vialHolder, v3.Vec{}, channelOpeningKeepNormal)
+	vialHolderCut2 := sdf.Cut3D(vialHolder, v3.Vec{}, sdf.MirrorXZ().MulPosition(channelOpeningKeepNormal))
+	vialHolder = sdf.Union3D(vialHolderCut1, vialHolderCut2)
+	vialHolderHole = sdf.Transform3D(
+		vialHolderHole,
+		sdf.Translate3d(v3.Vec{X: -tubeLength / 2.0, Y: bendDip}).Mul(
+			sdf.RotateY(-1.0/4.0*sdf.Tau).Mul(
+				sdf.RotateZ(1.0/4.0*sdf.Tau),
+			),
+		),
+	)
+	vialHolder = sdf.Transform3D(
+		vialHolder,
+		sdf.Translate3d(v3.Vec{X: -tubeLength / 2.0, Y: bendDip}).Mul(
+			sdf.RotateY(-1.0/4.0*sdf.Tau).Mul(
+				sdf.RotateZ(1.0/4.0*sdf.Tau),
 			),
 		),
 	)
 
-	pipe = sdf.Union3D(pipe, tubeLip)
+	holes := sdf.Union3D(channelHole, funnelHole, vialHolderHole)
+	pipe := sdf.Union3D(base, channel, funnel)
+	pipe = sdf.Union3D(pipe, vialHolder)
+	pipe.(*sdf.UnionSDF3).SetMin(sdf.RoundMin(thickness))
+	pipe = sdf.Difference3D(pipe, holes)
 
 	render.ToSTL(pipe, "pipe.stl", render.NewMarchingCubesUniform(600))
 
+}
+
+type Dimensions struct {
+	Height float64
+	Radius float64
+	Round  float64
+}
+
+func stackedCylinders(startZ float64, dimensionses ...Dimensions) (sdf.SDF3, error) {
+	cylinders := make([]sdf.SDF3, len(dimensionses))
+	targetZ := startZ
+	for i, d := range dimensionses {
+		c, err := sdf.Cylinder3D(d.Height, d.Radius, d.Round)
+		if err != nil {
+			return nil, err
+		}
+		c = sdf.Transform3D(c, sdf.Translate3d(v3.Vec{Z: d.Height/2.0 + targetZ}))
+		targetZ += d.Height
+		cylinders[i] = c
+	}
+	return sdf.Union3D(cylinders...), nil
+}
+
+func getMaxRadiusAndSumHeight(dimensionses ...Dimensions) Dimensions {
+	maxd := Dimensions{Height: 0, Radius: dimensionses[0].Radius}
+	for _, d := range dimensionses {
+		if maxd.Radius < d.Radius {
+			maxd.Radius = d.Radius
+		}
+		maxd.Height += d.Height
+	}
+	return maxd
 }
