@@ -1,0 +1,34 @@
+WaterFowl Keyboard Case
+
+Pieces - individual, printable parts (1:1 stl files)
+Features - human understandable details about a piece or a relationship between pieces
+Geometries - The shapes involved in creating the features of a piece
+
+Pieces:
+Top Cover (tc)
+Left Tray (lt)
+Right Tray (rt)
+Nut (nt)
+
+Features:
+Fits WaterFowl Keyboard Shape (tc), (lt), (rt)
+Cover fits nicely over trays (tc), (lt), (rt)
+	- chamfer of trays
+Reliefs for keyboard screws (lt), (rt)
+Reliefs for keyboard feet (lt), (rt)
+Top Cover locks into place with trays (tc), (lt), (rt), (nt)
+Trays pivot from flat to tented (lt), (rt)
+Trays lock into place at various tenting angles (lt), (rt), (nt)
+
+
+Geometries:
+2D shape of keeboard
+Holes at keyboard screw locations
+Holes at feet locations
+Hole and tabs for locking cover to trays
+
+Observations after fitment test:
+[x] - screw holes too small
+[ ] - switch allowance (lip exclusion) must be deeper
+[x] - keyboard tolerance can be loosened
+

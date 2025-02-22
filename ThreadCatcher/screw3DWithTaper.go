@@ -3,7 +3,11 @@ package main
 import (
 	"math"
 
+	//"github.com/deadsy/sdfx/obj"
+	//"github.com/deadsy/sdfx/render"
 	"github.com/deadsy/sdfx/sdf"
+	"github.com/deadsy/sdfx/vec/v2"
+	"github.com/deadsy/sdfx/vec/v3"
 )
 
 // ScrewSDF3WithTaper is a 3d screw form with a taper.
@@ -40,14 +44,14 @@ func Screw3DWithTaper(
 	// The max-y axis of the sdf2 bounding box is the radius of the thread.
 	bb := s.thread.BoundingBox()
 	r := bb.Max.Y
-	s.bb = sdf.Box3{sdf.V3{-r, -r, -s.length}, sdf.V3{r, r, s.length}}
+	s.bb = sdf.Box3{v3.Vec{-r, -r, -s.length}, v3.Vec{r, r, s.length}}
 	return &s
 }
 
 // Evaluate returns the minimum distance to a 3d screw form.
-func (s *ScrewSDF3WithTaper) Evaluate(p sdf.V3) float64 {
+func (s *ScrewSDF3WithTaper) Evaluate(p v3.Vec) float64 {
 	// map the 3d point back to the xy space of the profile
-	p0 := sdf.V2{}
+	p0 := v2.Vec{}
 	// the distance from the 3d z-axis maps to the 2d y-axis
 	p0.Y = math.Sqrt(p.X*p.X + p.Y*p.Y)
 	if p.Z > s.taperAtHeight {
@@ -61,9 +65,9 @@ func (s *ScrewSDF3WithTaper) Evaluate(p sdf.V3) float64 {
 	// get the thread profile distance
 	d0 := s.thread.Evaluate(p0)
 	// create a region for the screw length
-	d1 := sdf.Abs(p.Z) - s.length
+	d1 := math.Abs(p.Z) - s.length
 	// return the intersection
-	return sdf.Max(d0, d1)
+	return math.Max(d0, d1)
 }
 
 // BoundingBox returns the bounding box for a 3d screw form.
