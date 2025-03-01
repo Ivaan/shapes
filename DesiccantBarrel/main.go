@@ -13,6 +13,7 @@ import (
 )
 
 func main() {
+	//creality hyper pla cardboard spool: diameter of spool hole: 55.5mm, width 63.7mm
 	barrelRadius := 25.0
 	barrelHeight := 64.0 - 7.0
 	barrelThickness := 1.0
@@ -75,6 +76,21 @@ func main() {
 	endCap = sdf.Transform3D(endCap, sdf.Translate3d(v3.Vec{Z: -barrelHeight/2.0 + barrelThickness/2.0}))
 
 	holeyBarrel = sdf.Union3D(holeyBarrel, endCap)
+
+	tpe45, err := threadProfile(threadRadius-threadTolerance, threadPitch, 45, "external")
+	if err != nil {
+		panic(err)
+	}
+	tallScrewBolt, err := sdf.Screw3D(
+		tpe45,          // 2D thread profile
+		tallBoltHeight, // length of screw
+		0,              // thread taper angle
+		threadPitch,    // thread to thread distance
+		1,              // number of thread starts (< 0 for left hand threads)
+	)
+	if err != nil {
+		panic(err)
+	}
 
 	render.ToSTL(holeyBarrel, "holeyBarrel.stl", render.NewMarchingCubesUniform(400))
 }
