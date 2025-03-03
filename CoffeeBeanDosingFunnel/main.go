@@ -34,7 +34,7 @@ func main() {
 	thumbSpotDepthSphereDistance := 30.0
 
 	doText := true
-	// no6Text := false //true is No6 text, false is NAZ fab text
+	nazFabText := true //false is No6 text, true is NAZ fab text
 	textHeight := 13.0
 	cutTextHeight := 15.0
 	textPositionFromEnd := 20.0
@@ -56,10 +56,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	// text := sdf.NewText("№6")
-	// cutText := sdf.NewText(" ")
-	text := sdf.NewText("fab")
-	cutText := sdf.NewText("NAZ")
+	var text, cutText *sdf.Text
+	if nazFabText {
+		text = sdf.NewText("fab")
+		cutText = sdf.NewText("NAZ")
+	} else {
+		text = sdf.NewText("№6")
+		cutText = sdf.NewText(" ")
+	}
 
 	text2d, err := sdf.Text2D(f, text, textHeight)
 	if err != nil {
@@ -67,13 +71,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	cutText2d, err := sdf.Text2D(f, cutText, cutTextHeight)
-	if err != nil {
-		fmt.Printf("can't generate X sdf2 %s\n", err)
-		os.Exit(1)
-	}
-
-	text3d := sdf.Extrude3D(text2d, thickness)
+	// x3d, err := sdf.Loft3D(sdf.Offset2D(x2d, -4), x2d, 4.0, 0)
+	// text3d := sdf.Extrude3D(text2d, thickness)
+	text3d, err := sdf.Loft3D(sdf.Offset2D(text2d, thickness), text2d, thickness, 0)
 	if err != nil {
 		fmt.Printf("can't generate text sdf3 %s\n", err)
 		os.Exit(1)
@@ -88,28 +88,41 @@ func main() {
 			sdf.Translate3d(v3.Vec{X: -tubeLength/2.0 + textPositionFromEnd, Z: -tubeID/2.0 - thickness}).Mul(sdf.RotateY(1.0/2.0*sdf.Tau)),
 		),
 	)
-	cutText3d := sdf.Extrude3D(cutText2d, thickness)
-	if err != nil {
-		fmt.Printf("can't generate text sdf3 %s\n", err)
-		os.Exit(1)
+	var cutText3d sdf.SDF3
+	if nazFabText {
+		cutText2d, err := sdf.Text2D(f, cutText, cutTextHeight)
+		if err != nil {
+			fmt.Printf("can't generate X sdf2 %s\n", err)
+			os.Exit(1)
+		}
+		// cutText3d := sdf.Extrude3D(cutText2d, thickness)
+		cutText3d, err = sdf.Loft3D(cutText2d, sdf.Offset2D(cutText2d, thickness), thickness, 0)
+		if err != nil {
+			fmt.Printf("can't generate text sdf3 %s\n", err)
+			os.Exit(1)
+		}
+		cutText3d = sdf.Union3D(
+			sdf.Transform3D(
+				cutText3d,
+				sdf.Translate3d(v3.Vec{X: -tubeLength/2.0 + textPositionFromEnd, Z: tubeID/2.0 + thickness}),
+			),
+			sdf.Transform3D(
+				cutText3d,
+				sdf.Translate3d(v3.Vec{X: -tubeLength/2.0 + textPositionFromEnd, Z: -tubeID/2.0 - thickness}).Mul(sdf.RotateY(1.0/2.0*sdf.Tau)),
+			),
+		)
+		cutText3d = sdf.Difference3D(cutText3d, text3d)
+		// render.ToSTL(cutText3d, "cutText3d.stl", render.NewMarchingCubesUniform(600))
+		// render.ToSTL(text3d, "text3d.stl", render.NewMarchingCubesUniform(600))
 	}
-	cutText3d = sdf.Union3D(
-		sdf.Transform3D(
-			cutText3d,
-			sdf.Translate3d(v3.Vec{X: -tubeLength/2.0 + textPositionFromEnd, Z: tubeID/2.0 + thickness}),
-		),
-		sdf.Transform3D(
-			cutText3d,
-			sdf.Translate3d(v3.Vec{X: -tubeLength/2.0 + textPositionFromEnd, Z: -tubeID/2.0 - thickness}).Mul(sdf.RotateY(1.0/2.0*sdf.Tau)),
-		),
-	)
-	cutText3d = sdf.Difference3D(cutText3d, text3d)
 	if doText {
 		base = sdf.Union3D(
 			base,
 			text3d,
 		)
-		base = sdf.Difference3D(base, cutText3d)
+		if nazFabText {
+			base = sdf.Difference3D(base, cutText3d)
+		}
 	}
 
 	base = sdf.Transform3D(base, sdf.Translate3d(v3.Vec{Y: -tubeID/4.0 - thickness/2.0 + bendDip/2.0}))
@@ -221,6 +234,13 @@ func main() {
 	pipe = sdf.Union3D(pipe, base, vialHolder)
 	pipe.(*sdf.UnionSDF3).SetMin(sdf.RoundMin(thickness))
 	pipe = sdf.Difference3D(pipe, holes)
+
+	pipe = sdf.Transform3D(
+		pipe,
+		sdf.Translate3d(v3.Vec{Z: (tubeID/2+thickness+bendDip)/2.0 + thickness}).Mul(
+			sdf.RotateX(sdf.Tau/4.0),
+		),
+	)
 
 	render.ToSTL(pipe, "pipe.stl", render.NewMarchingCubesUniform(600))
 
