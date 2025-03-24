@@ -245,18 +245,18 @@ func main() {
 	topCover = sdf.Difference3D(
 		topCover,
 		sdf.Union3D(
-			platesBareSub,
+			Drape3D(platesBareSub, 1.0),
 			keebHole,
 		),
 	)
 	// topCover = sdf.Cut3D(topCover, v3.Vec{Z: basePlateThickness + 15}, v3.Vec{Z: -1})
-	// render.ToSTL(topCover, "topCover.stl", render.NewMarchingCubesUniform(500))
+	render.ToSTL(topCover, "topCover.stl", render.NewMarchingCubesUniform(500))
 	// render.ToSTL(plateRight, "plateRight.stl", render.NewMarchingCubesUniform(800))
 	// render.ToSTL(plateLeft, "plateLeft.stl", render.NewMarchingCubesUniform(800))
 	// render.ToSTL(platesBareSub, "platesBareSub.stl", render.NewMarchingCubesUniform(1500))
 	// render.ToSTL(plates, "plates.stl", render.NewMarchingCubesUniform(500))
 	// render.ToSTL(platesBareSub, "platesBareSub.stl", render.NewMarchingCubesUniform(500))
-	render.ToSTL(TestDrape(), "Drape.stl", render.NewMarchingCubesUniform(500))
+	// render.ToSTL(TestDrape(), "Drape.stl", render.NewMarchingCubesUniform(500))
 
 	// render.ToSTL(ShowConnect(), "ShowConnect.stl", render.NewMarchingCubesUniform(500))
 	// render.ToSTL(ShowDebug(), "ShowDebug.stl", render.NewMarchingCubesUniform(500))
@@ -475,9 +475,9 @@ func lineFromTo(from, to v2.Vec) sdf.SDF2 {
 	)
 }
 
-//circleTangents returns the two tangets of the given circle that intersect the given point
-//an error is returned if the point is within the circle
-//the case of the point being on the edge of the circle is also considered this error (perhaps erroneously)
+// circleTangents returns the two tangets of the given circle that intersect the given point
+// an error is returned if the point is within the circle
+// the case of the point being on the edge of the circle is also considered this error (perhaps erroneously)
 func circleTangents(c circ, p v2.Vec) (v2.Vec, v2.Vec, error) {
 	p = p.Sub(c.Loc)
 
