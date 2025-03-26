@@ -256,7 +256,7 @@ func main() {
 	// render.ToSTL(platesBareSub, "platesBareSub.stl", render.NewMarchingCubesUniform(1500))
 	// render.ToSTL(plates, "plates.stl", render.NewMarchingCubesUniform(500))
 	// render.ToSTL(platesBareSub, "platesBareSub.stl", render.NewMarchingCubesUniform(500))
-	// render.ToSTL(TestDrape(), "Drape.stl", render.NewMarchingCubesUniform(500))
+	render.ToSTL(TestDrape(), "Drape-highFidelity.stl", render.NewMarchingCubesUniform(500))
 
 	// render.ToSTL(ShowConnect(), "ShowConnect.stl", render.NewMarchingCubesUniform(500))
 	// render.ToSTL(ShowDebug(), "ShowDebug.stl", render.NewMarchingCubesUniform(500))
