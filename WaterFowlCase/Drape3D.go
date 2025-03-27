@@ -46,8 +46,6 @@ func (d *DrapeSDF3) getHeight(col v2.Vec) float64 {
 		d.mutex.Lock()
 		f, ok := d.heights[col]
 		if !ok {
-			// x := float64(col.x) * d.grainSize
-			// y := float64(col.y) * d.grainSize
 			zMax := d.shape.BoundingBox().Max.Z
 			zMin := d.shape.BoundingBox().Min.Z
 			f = zMin
@@ -68,16 +66,6 @@ func (d *DrapeSDF3) getHeight(col v2.Vec) float64 {
 }
 
 func (d *DrapeSDF3) Evaluate(p v3.Vec) float64 {
-	// col1 := struct{ x, y int }{int(math.Floor(p.X / d.grainSize)), int(math.Floor(p.Y / d.grainSize))}
-	// col2 := struct{ x, y int }{col1.x + 1, col1.y}
-	// col3 := struct{ x, y int }{col1.x, col1.y + 1}
-	// col4 := struct{ x, y int }{col1.x + 1, col1.y + 1}
-	// h1 := d.getHeight(col1)
-	// h2 := d.getHeight(col2)
-	// h3 := d.getHeight(col3)
-	// h4 := d.getHeight(col4)
-
-	// h := math.Max(math.Max(h1, h2), math.Max(h3, h4))
 	h := d.getHeight(v2.Vec{X: p.X, Y: p.Y})
 	zMin := d.shape.BoundingBox().Min.Z
 
