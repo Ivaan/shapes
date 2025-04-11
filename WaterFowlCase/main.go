@@ -54,8 +54,8 @@ func main() {
 	keyboardThickness := 32.0 //thickness overall of the keeb
 	// keyboardLayerAThickness := 6.0 //not using this for now
 	keyboardLayerBThickness := 11.6
-	lidLip := 1.1 //width of the lip inside the lid that catches the keeb and keeps it from rattling around
-	lipExclusion := sdf.Transform2D(sdf.Box2D(v2.Vec{X: 8, Y: 20}, 2), sdf.Translate2d(v2.Vec{X: 9.5, Y: 23.6}))
+	lidLip := 1.1                                                                                                 //width of the lip inside the lid that catches the keeb and keeps it from rattling around
+	lipExclusion := sdf.Transform2D(sdf.Box2D(v2.Vec{X: 11, Y: 20}, 2), sdf.Translate2d(v2.Vec{X: 9.5, Y: 23.6})) //This is to cut a relief into the lid to make room for the delicate switches
 	keeperAngle := sdf.Tau / 32
 
 	rotationAxisVector := v3.Vec{Y: 5, Z: 3}
@@ -104,6 +104,7 @@ func main() {
 		extrudeFromTo(keebRightShapeB, keyboardLayerBThickness+basePlateThickness, keyboardThickness+basePlateThickness),
 		extrudeFromTo(lipExclusion, 0, keyboardLayerBThickness+basePlateThickness),
 	)
+
 	keebRight = sdf.Transform3D(
 		keebRight,
 		sdf.Translate3d(v3.Vec{X: platesApart / 2}),
@@ -250,13 +251,13 @@ func main() {
 		),
 	)
 	// topCover = sdf.Cut3D(topCover, v3.Vec{Z: basePlateThickness + 15}, v3.Vec{Z: -1})
-	render.ToSTL(topCover, "topCover.stl", render.NewMarchingCubesUniform(500))
+	// render.ToSTL(topCover, "topCover.stl", render.NewMarchingCubesUniform(1500))
 	// render.ToSTL(plateRight, "plateRight.stl", render.NewMarchingCubesUniform(800))
 	// render.ToSTL(plateLeft, "plateLeft.stl", render.NewMarchingCubesUniform(800))
 	// render.ToSTL(platesBareSub, "platesBareSub.stl", render.NewMarchingCubesUniform(1500))
-	// render.ToSTL(plates, "plates.stl", render.NewMarchingCubesUniform(500))
+	render.ToSTL(plates, "plates.stl", render.NewMarchingCubesUniform(1500))
 	// render.ToSTL(platesBareSub, "platesBareSub.stl", render.NewMarchingCubesUniform(500))
-	render.ToSTL(TestDrape(), "Drape-highFidelity.stl", render.NewMarchingCubesUniform(500))
+	// render.ToSTL(TestDrape(), "Drape-highFidelity.stl", render.NewMarchingCubesUniform(500))
 
 	// render.ToSTL(ShowConnect(), "ShowConnect.stl", render.NewMarchingCubesUniform(500))
 	// render.ToSTL(ShowDebug(), "ShowDebug.stl", render.NewMarchingCubesUniform(500))
