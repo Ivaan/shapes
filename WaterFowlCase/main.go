@@ -212,8 +212,15 @@ func main() {
 		moveToRotationAxis(-nutThickness/2+rotationSurfaceOffset+nutThickness),
 	)
 
-	plateRightBareSub = Connect3DBy2DSliceLoft(plateRightBareSub, boltGap, v3.Vec{X: circsRight[0].Loc.X - circsRight[0].R + platesApart/2, Y: circsRight[0].Loc.Y, Z: basePlateThickness / 2}, v3.Vec{X: 0, Y: circsRight[0].Loc.Y, Z: 8})
 	plateLeftBareSub := sdf.Transform3D(plateRightBareSub, sdf.MirrorYZ())
+	plateRightBareConnectionSub := Connect3DBy2DSliceLoft(plateRightBareSub, boltGap, v3.Vec{X: circsRight[0].Loc.X - circsRight[0].R + platesApart/2, Y: circsRight[0].Loc.Y, Z: basePlateThickness / 2}, v3.Vec{X: 0, Y: circsRight[0].Loc.Y, Z: 8})
+	plateLeftBareConnectionSub := sdf.Transform3D(plateRightBareConnectionSub, sdf.MirrorYZ())
+
+	connection := sdf.Difference3D(
+		sdf.Union3D(plateLeftBareConnectionSub, plateRightBareConnectionSub),
+		sdf.Union3D(plateLeftBareSub, plateRightBareSub),
+	)
+	connection = Drape3D(connection, 1.0)
 
 	platesBareSub := sdf.Union3D(
 		plateRightBareSub,
@@ -246,16 +253,17 @@ func main() {
 	topCover = sdf.Difference3D(
 		topCover,
 		sdf.Union3D(
-			Drape3D(platesBareSub, 1.0),
+			platesBareSub,
 			keebHole,
+			connection,
 		),
 	)
 	// topCover = sdf.Cut3D(topCover, v3.Vec{Z: basePlateThickness + 15}, v3.Vec{Z: -1})
-	// render.ToSTL(topCover, "topCover.stl", render.NewMarchingCubesUniform(1500))
+	render.ToSTL(topCover, "topCover.stl", render.NewMarchingCubesUniform(1500))
 	// render.ToSTL(plateRight, "plateRight.stl", render.NewMarchingCubesUniform(800))
 	// render.ToSTL(plateLeft, "plateLeft.stl", render.NewMarchingCubesUniform(800))
 	// render.ToSTL(platesBareSub, "platesBareSub.stl", render.NewMarchingCubesUniform(1500))
-	render.ToSTL(plates, "plates.stl", render.NewMarchingCubesUniform(1500))
+	// render.ToSTL(plates, "plates.stl", render.NewMarchingCubesUniform(1500))
 	// render.ToSTL(platesBareSub, "platesBareSub.stl", render.NewMarchingCubesUniform(500))
 	// render.ToSTL(TestDrape(), "Drape-highFidelity.stl", render.NewMarchingCubesUniform(500))
 
